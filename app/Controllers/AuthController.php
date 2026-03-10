@@ -49,25 +49,73 @@ class AuthController extends BaseController
         $username = $this->request->getPost('username');
         $password = $this->request->getPost('password');
 
+        // Verificar si la cuenta está bloqueada
+        if ($this->usuarioModel->isLocked($username)) {
+            $minutes = $this->usuarioModel->getLockoutTimeRemaining($username);
+            return redirect()->back()
+                ->withInput()
+                ->with('error', "Cuenta bloqueada. Intente en {$minutes} minutos.");
+        }
+
         $usuario = $this->usuarioModel->verifyCredentials($username, $password);
 
         if ($usuario) {
+            // Verificar estado del usuario
+            if ($usuario['estado'] !== 'ACTIVO') {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'Usuario inactivo. Contacte al administrador.');
+            }
+
+            // Resetear intentos fallidos
+            $this->usuarioModel->resetFailedAttempts($usuario['id']);
+
+            // Verificar si tiene 2FA habilitado
+            if (isset($usuario['two_factor_enabled']) && $usuario['two_factor_enabled'] === 'S') {
+                // Generar código 2FA
+                $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+                $expires = date('Y-m-d H:i:s', strtotime('+5 minutes'));
+
+                $this->usuarioModel->update($usuario['id'], [
+                    'two_factor_code'   => $code,
+                    'two_factor_expires' => $expires,
+                ]);
+
+                // Guardar ID temporal
+                session()->set('pending_user_id', $usuario['id']);
+                session()->setFlashdata('two_factor_code', $code);
+
+                return redirect()->to('/security/verify-login-2fa');
+            }
+
             // Crear sesión
             session()->set([
-                'id'           => $usuario['id'],
-                'username'     => $usuario['username'],
-                'nombre_completo' => $usuario['nombre_completo'],
-                'rol'          => $usuario['rol'],
-                'isLoggedIn'   => true,
+                'id'                => $usuario['id'],
+                'username'          => $usuario['username'],
+                'nombre_completo'   => $usuario['nombre_completo'],
+                'rol'               => $usuario['rol'],
+                'departamento_id'   => $usuario['departamento_id'] ?? null,
+                'isLoggedIn'        => true,
             ]);
 
             return redirect()->to('/dashboard')
                 ->with('success', 'Bienvenido, ' . $usuario['username']);
         }
 
+        // Registrar intento fallido
+        $this->usuarioModel->recordFailedAttempt($username);
+
+        // Verificar si se bloqueó
+        if ($this->usuarioModel->isLocked($username)) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Demasiados intentos. Cuenta bloqueada por 15 minutos.');
+        }
+
+        $attemptsLeft = 5 - ($this->usuarioModel->getIntentsLeft($username) ?? 0);
         return redirect()->back()
             ->withInput()
-            ->with('error', 'Credenciales incorrectas');
+            ->with('error', "Credenciales incorrectas. Intentos restantes: {$attemptsLeft}");
     }
 
     /**

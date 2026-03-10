@@ -5,18 +5,21 @@ namespace App\Controllers;
 use App\Models\PersonaModel;
 use App\Models\EvaluacionModel;
 use App\Models\SeguimientoModel;
+use App\Models\DepartamentoModel;
 
 class PersonaController extends BaseController
 {
     protected $personaModel;
     protected $evaluacionModel;
     protected $seguimientoModel;
+    protected $departamentoModel;
 
     public function __construct()
     {
         $this->personaModel = new PersonaModel();
         $this->evaluacionModel = new EvaluacionModel();
         $this->seguimientoModel = new SeguimientoModel();
+        $this->departamentoModel = new DepartamentoModel();
     }
 
     /**
@@ -25,23 +28,48 @@ class PersonaController extends BaseController
     public function index()
     {
         $busqueda = $this->request->getGet('q');
+        $rol = session()->get('rol');
+        $departamentoId = session()->get('departamento_id');
         
-        if ($busqueda) {
-            $personas = $this->personaModel
-                ->groupStart()
-                ->like('primer_nombre', $busqueda)
-                ->orLike('primer_apellido', $busqueda)
-                ->orLike('cedula', $busqueda)
-                ->orLike('correo_electronico', $busqueda)
-                ->groupEnd()
-                ->where('estado_registro', 'ACTIVO')
-                ->orderBy('primer_apellido', 'ASC')
-                ->paginate(15);
+        // Si es ADMIN, ve todas las personas. Si es DIRECTOR, solo ve las de su departamento
+        if ($rol === 'ADMIN' || $rol === 'EVALUADOR') {
+            if ($busqueda) {
+                $personas = $this->personaModel
+                    ->groupStart()
+                    ->like('primer_nombre', $busqueda)
+                    ->orLike('primer_apellido', $busqueda)
+                    ->orLike('cedula', $busqueda)
+                    ->orLike('correo_electronico', $busqueda)
+                    ->groupEnd()
+                    ->where('estado_registro', 'ACTIVO')
+                    ->orderBy('primer_apellido', 'ASC')
+                    ->paginate(15);
+            } else {
+                $personas = $this->personaModel
+                    ->where('estado_registro', 'ACTIVO')
+                    ->orderBy('primer_apellido', 'ASC')
+                    ->paginate(15);
+            }
         } else {
-            $personas = $this->personaModel
-                ->where('estado_registro', 'ACTIVO')
-                ->orderBy('primer_apellido', 'ASC')
-                ->paginate(15);
+            if ($busqueda) {
+                $personas = $this->personaModel
+                    ->groupStart()
+                    ->like('primer_nombre', $busqueda)
+                    ->orLike('primer_apellido', $busqueda)
+                    ->orLike('cedula', $busqueda)
+                    ->orLike('correo_electronico', $busqueda)
+                    ->groupEnd()
+                    ->where('departamento_id', $departamentoId)
+                    ->where('estado_registro', 'ACTIVO')
+                    ->orderBy('primer_apellido', 'ASC')
+                    ->paginate(15);
+            } else {
+                $personas = $this->personaModel
+                    ->where('departamento_id', $departamentoId)
+                    ->where('estado_registro', 'ACTIVO')
+                    ->orderBy('primer_apellido', 'ASC')
+                    ->paginate(15);
+            }
         }
 
         $data = [
@@ -59,9 +87,12 @@ class PersonaController extends BaseController
      */
     public function create()
     {
+        $departamentos = $this->departamentoModel->getDepartamentosActivos();
+        
         $data = [
-            'title'    => 'Nueva Persona',
-            'persona' => null,
+            'title'        => 'Nueva Persona',
+            'persona'      => null,
+            'departamentos' => $departamentos,
         ];
 
         return view('personas/create', $data);
@@ -95,6 +126,13 @@ class PersonaController extends BaseController
         // Agregar fecha de registro
         $data['fecha_registro'] = date('Y-m-d H:i:s');
         $data['estado_registro'] = 'ACTIVO';
+
+        // Si es director, asignar automáticamente su departamento
+        $rol = session()->get('rol');
+        $departamentoId = session()->get('departamento_id');
+        if ($rol === 'DIRECTOR' && $departamentoId) {
+            $data['departamento_id'] = $departamentoId;
+        }
 
         $this->personaModel->insert($data);
 
@@ -140,9 +178,12 @@ class PersonaController extends BaseController
                 ->with('error', 'Persona no encontrada');
         }
 
+        $departamentos = $this->departamentoModel->getDepartamentosActivos();
+
         $data = [
-            'title'    => 'Editar Persona',
-            'persona' => $persona,
+            'title'        => 'Editar Persona',
+            'persona'     => $persona,
+            'departamentos' => $departamentos,
         ];
 
         return view('personas/edit', $data);
@@ -160,7 +201,6 @@ class PersonaController extends BaseController
                 ->with('error', 'Persona no encontrada');
         }
 
-        // Verificar si la cédula cambió
         $cedulaActual = $this->request->getPost('cedula');
         $rules = [
             'primer_nombre'     => 'required|min_length[2]|max_length[50]',
@@ -180,7 +220,6 @@ class PersonaController extends BaseController
 
         $data = $this->request->getPost();
 
-        // Recalcular edad si cambió la fecha de nacimiento
         if (!empty($data['fecha_nacimiento'])) {
             $data['edad'] = $this->personaModel->calcularEdad($data['fecha_nacimiento']);
         }
@@ -203,7 +242,6 @@ class PersonaController extends BaseController
                 ->with('error', 'Persona no encontrada');
         }
 
-        // Soft delete - cambiar estado
         $this->personaModel->update($id, ['estado_registro' => 'INACTIVO']);
 
         return redirect()->to('/personas')
@@ -244,11 +282,77 @@ class PersonaController extends BaseController
      */
     public function estadisticas()
     {
-        $data = $this->personaModel->getEstadisticas();
+        $rol = session()->get('rol');
+        $departamentoId = session()->get('departamento_id');
+        
+        if ($rol === 'ADMIN' || $rol === 'EVALUADOR') {
+            $data = $this->personaModel->getEstadisticas();
+        } else {
+            $total = $this->personaModel->where('departamento_id', $departamentoId)->countAllResults();
+            $activos = $this->personaModel->where('departamento_id', $departamentoId)->where('estado_registro', 'ACTIVO')->countAllResults();
+            $data = [
+                'total'     => $total,
+                'activos'   => $activos,
+                'inactivos' => $total - $activos,
+            ];
+        }
         
         return $this->response->setJSON([
             'success' => true,
             'data'    => $data
         ]);
+    }
+
+    /**
+     * Sube una foto para una persona
+     */
+    public function uploadFoto($id = null)
+    {
+        $persona = $this->personaModel->find($id);
+
+        if (!$persona) {
+            return redirect()->to('/personas')
+                ->with('error', 'Persona no encontrada');
+        }
+
+        $file = $this->request->getFile('foto');
+
+        if (!$file || $file->getError() === UPLOAD_ERR_NO_FILE) {
+            return redirect()->to('/personas/show/' . $id)
+                ->with('error', 'No se ha seleccionado ningún archivo');
+        }
+
+        try {
+            $newName = $this->personaModel->uploadFoto($id, $file);
+
+            return redirect()->to('/personas/show/' . $id)
+                ->with('success', 'Foto actualizada exitosamente');
+        } catch (\Exception $e) {
+            return redirect()->to('/personas/show/' . $id)
+                ->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Elimina la foto de una persona
+     */
+    public function deleteFoto($id = null)
+    {
+        $persona = $this->personaModel->find($id);
+
+        if (!$persona) {
+            return redirect()->to('/personas')
+                ->with('error', 'Persona no encontrada');
+        }
+
+        try {
+            $this->personaModel->deleteFoto($id);
+
+            return redirect()->to('/personas/show/' . $id)
+                ->with('success', 'Foto eliminada exitosamente');
+        } catch (\Exception $e) {
+            return redirect()->to('/personas/show/' . $id)
+                ->with('error', $e->getMessage());
+        }
     }
 }

@@ -43,6 +43,9 @@
                     </form>
 
                     <div class="text-center mt-3">
+                        <a href="<?= base_url('/security/forgot-password') ?>">¿Olvidó su contraseña?</a>
+                    </div>
+                    <div class="text-center mt-1">
                         <a href="<?= base_url('/register') ?>">¿No tiene cuenta? Regístrese</a>
                     </div>
                 </div>

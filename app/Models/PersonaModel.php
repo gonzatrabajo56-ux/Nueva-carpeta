@@ -58,7 +58,9 @@ class PersonaModel extends Model
         'tipo_sangre',
         'carga_familiar',
         'fotos',
+        'foto',
         'observaciones',
+        'departamento_id',
         'fecha_registro',
         'estado_registro',
         'usuario_registro',
@@ -144,5 +146,105 @@ class PersonaModel extends Model
             'activos'   => $activos,
             'inactivos' => $total - $activos,
         ];
+    }
+
+    /**
+     * Obtiene personas por departamento
+     */
+    public function getPersonasPorDepartamento($departamentoId)
+    {
+        return $this->where('departamento_id', $departamentoId)
+                    ->where('estado_registro', 'ACTIVO')
+                    ->findAll();
+    }
+
+    /**
+     * Obtiene personas por departamento con paginación
+     */
+    public function getPersonasPorDepartamentoPaginadas($departamentoId, $pagina = 15)
+    {
+        return $this->where('departamento_id', $departamentoId)
+                    ->where('estado_registro', 'ACTIVO')
+                    ->orderBy('primer_apellido', 'ASC')
+                    ->paginate($pagina);
+    }
+
+    /**
+     * Sube una foto de perfil
+     */
+    public function uploadFoto($personaId, $file)
+    {
+        if (!$file || $file->getError() === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+
+        // Validar que es una imagen
+        if (!$file->isValid()) {
+            throw new \RuntimeException('Archivo inválido');
+        }
+
+        // Validar tipo de imagen
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!in_array($file->getMimeType(), $allowedTypes)) {
+            throw new \RuntimeException('Solo se permiten imágenes JPEG, PNG, GIF o WebP');
+        }
+
+        // Validar tamaño (máx 2MB)
+        if ($file->getSize() > 2 * 1024 * 1024) {
+            throw new \RuntimeException('La imagen no puede superar los 2MB');
+        }
+
+        // Usar carpeta public para que sea accesible via URL
+        $uploadPath = ROOTPATH . 'public/uploads/fotos/';
+        if (!is_dir($uploadPath)) {
+            mkdir($uploadPath, 0755, true);
+        }
+
+        // Generar nombre único
+        $extension = $file->getExtension();
+        $newName = 'persona_' . $personaId . '_' . time() . '.' . $extension;
+
+        // Mover archivo
+        $file->move($uploadPath, $newName);
+
+        // Actualizar base de datos
+        $this->update($personaId, ['foto' => $newName]);
+
+        return $newName;
+    }
+
+    /**
+     * Obtiene la ruta de la foto
+     */
+    public function getFotoPath($persona)
+    {
+        if (empty($persona['foto'])) {
+            return null;
+        }
+
+        // Buscar en public/uploads/fotos/
+        $path = ROOTPATH . 'public/uploads/fotos/' . $persona['foto'];
+        if (file_exists($path)) {
+            return base_url('uploads/fotos/' . $persona['foto']);
+        }
+
+        return null;
+    }
+
+    /**
+     * Elimina la foto de una persona
+     */
+    public function deleteFoto($personaId)
+    {
+        $persona = $this->find($personaId);
+
+        if ($persona && $persona['foto']) {
+            $path = ROOTPATH . 'public/uploads/fotos/' . $persona['foto'];
+            if (file_exists($path)) {
+                unlink($path);
+            }
+
+            $this->update($personaId, ['foto' => null]);
+        }
     }
 }

@@ -53,6 +53,9 @@
                     <a href="<?= base_url('/evaluaciones') ?>" class="<?= url_is('/evaluaciones*') ? 'active' : '' ?>">
                         <i class="bi bi-clipboard-check me-2"></i> Evaluaciones
                     </a>
+                    <a href="<?= base_url('/evaluaciones/empleado-del-mes') ?>">
+                        <i class="bi bi-trophy me-2"></i> Empleado del Mes
+                    </a>
                     <a href="<?= base_url('/seguimientos') ?>" class="<?= url_is('/seguimientos*') ? 'active' : '' ?>">
                         <i class="bi bi-journal-text me-2"></i> Seguimientos
                     </a>
@@ -62,6 +65,10 @@
                     </a>
                     <a href="<?= base_url('/seguimientos/proximos') ?>">
                         <i class="bi bi-calendar-check me-2"></i> Próximos
+                    </a>
+                    <hr class="text-muted">
+                    <a href="<?= base_url('/reportes') ?>">
+                        <i class="bi bi-file-earmark-bar-graph me-2"></i> Reportes
                     </a>
                     <hr class="text-muted">
                     <a href="<?= base_url('/logout') ?>">

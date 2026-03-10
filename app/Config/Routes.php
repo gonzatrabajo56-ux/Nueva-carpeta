@@ -30,6 +30,8 @@ $routes->post('/personas/update/(:num)', 'PersonaController::update/$1');
 $routes->post('/personas/delete/(:num)', 'PersonaController::delete/$1');
 $routes->get('/personas/buscar', 'PersonaController::buscar');
 $routes->get('/personas/estadisticas', 'PersonaController::estadisticas');
+$routes->post('/personas/upload-foto/(:num)', 'PersonaController::uploadFoto/$1');
+$routes->post('/personas/delete-foto/(:num)', 'PersonaController::deleteFoto/$1');
 
 // Rutas de Evaluaciones
 $routes->get('/evaluaciones', 'EvaluacionController::index');
@@ -39,6 +41,8 @@ $routes->get('/evaluaciones/show/(:num)', 'EvaluacionController::show/$1');
 $routes->get('/evaluaciones/edit/(:num)', 'EvaluacionController::edit/$1');
 $routes->post('/evaluaciones/update/(:num)', 'EvaluacionController::update/$1');
 $routes->post('/evaluaciones/delete/(:num)', 'EvaluacionController::delete/$1');
+$routes->get('/evaluaciones/empleado-del-mes', 'EvaluacionController::empleadoDelMes');
+$routes->post('/evaluaciones/seleccionar-empleado/(:num)', 'EvaluacionController::seleccionarEmpleadoDelMes/$1');
 
 // Rutas de Seguimientos
 $routes->get('/seguimientos', 'SeguimientoController::index');
@@ -51,3 +55,24 @@ $routes->post('/seguimientos/delete/(:num)', 'SeguimientoController::delete/$1')
 $routes->get('/seguimientos/pendientes', 'SeguimientoController::pendientes');
 $routes->get('/seguimientos/proximos', 'SeguimientoController::proximos');
 $routes->post('/seguimientos/cambiar-estado/(:num)', 'SeguimientoController::cambiarEstado/$1');
+
+// Rutas de Seguridad
+$routes->get('/security/forgot-password', 'SecurityController::forgotPassword');
+$routes->post('/security/send-reset-link', 'SecurityController::sendResetLink');
+$routes->get('/security/reset-password/(:any)', 'SecurityController::resetPassword/$1');
+$routes->post('/security/update-password', 'SecurityController::updatePassword');
+$routes->get('/security/change-password', 'SecurityController::changePassword');
+$routes->post('/security/change-password', 'SecurityController::updatePasswordFromProfile');
+$routes->get('/security/enable-2fa', 'SecurityController::enableTwoFactor');
+$routes->post('/security/verify-2fa', 'SecurityController::verifyTwoFactor');
+$routes->post('/security/verify-login-2fa', 'SecurityController::verifyLogin2FA');
+$routes->get('/security/disable-2fa', 'SecurityController::disableTwoFactor');
+
+// Rutas de Reportes
+$routes->get('/reportes', 'ReporteController::index');
+$routes->get('/reportes/personas', 'ReporteController::personas');
+$routes->get('/reportes/personas/(:any)', 'ReporteController::personas/$1');
+$routes->get('/reportes/evaluaciones', 'ReporteController::evaluaciones');
+$routes->get('/reportes/evaluaciones/(:any)', 'ReporteController::evaluaciones/$1');
+$routes->get('/reportes/seguimientos', 'ReporteController::seguimientos');
+$routes->get('/reportes/seguimientos/(:any)', 'ReporteController::seguimientos/$1');

@@ -22,6 +22,27 @@
     <form action="<?= base_url('/personas') ?>" method="post">
         <?= csrf_field() ?>
         
+        <?php if (session()->get('rol') === 'ADMIN'): ?>
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-building"></i> Departamento</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Departamento</label>
+                        <select name="departamento_id" class="form-select">
+                            <option value="">Seleccionar departamento</option>
+                            <?php foreach ($departamentos as $dep): ?>
+                                <option value="<?= $dep['id'] ?>"><?= $dep['nombre'] ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+        
         <!-- Datos Personales -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">

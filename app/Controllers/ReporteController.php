@@ -1,0 +1,389 @@
+<?php
+
+namespace App\Controllers;
+
+use App\Models\PersonaModel;
+use App\Models\EvaluacionModel;
+use App\Models\SeguimientoModel;
+use App\Models\DepartamentoModel;
+
+class ReporteController extends BaseController
+{
+    protected $personaModel;
+    protected $evaluacionModel;
+    protected $seguimientoModel;
+    protected $departamentoModel;
+
+    public function __construct()
+    {
+        $this->personaModel = new PersonaModel();
+        $this->evaluacionModel = new EvaluacionModel();
+        $this->seguimientoModel = new SeguimientoModel();
+        $this->departamentoModel = new DepartamentoModel();
+    }
+
+    /**
+     * Menú de reportes
+     */
+    public function index()
+    {
+        $data = [
+            'title' => 'Reportes',
+            'departamentos' => $this->departamentoModel->findAll(),
+        ];
+
+        return view('reportes/index', $data);
+    }
+
+    /**
+     * Reporte de personas
+     */
+    public function personas($formato = 'html')
+    {
+        $departamentoId = $this->request->getGet('departamento');
+        $rol = session()->get('rol');
+        $departamentoSession = session()->get('departamento_id');
+
+        // Filtrar por departamento según rol
+        if ($rol === 'ADMIN' || $rol === 'EVALUADOR') {
+            if ($departamentoId) {
+                $personas = $this->personaModel->where('departamento_id', $departamentoId)
+                    ->where('estado_registro', 'ACTIVO')
+                    ->findAll();
+            } else {
+                $personas = $this->personaModel->where('estado_registro', 'ACTIVO')->findAll();
+            }
+        } else {
+            $personas = $this->personaModel->where('departamento_id', $departamentoSession)
+                ->where('estado_registro', 'ACTIVO')
+                ->findAll();
+        }
+
+        if ($formato === 'excel') {
+            return $this->exportExcelPersonas($personas);
+        } elseif ($formato === 'pdf') {
+            return $this->exportPdfPersonas($personas);
+        }
+
+        $data = [
+            'title' => 'Reporte de Personas',
+            'personas' => $personas,
+            'departamentos' => $this->departamentoModel->findAll(),
+        ];
+
+        return view('reportes/personas', $data);
+    }
+
+    /**
+     * Reporte de evaluaciones
+     */
+    public function evaluaciones($formato = 'html')
+    {
+        $departamentoId = $this->request->getGet('departamento');
+        $mes = $this->request->getGet('mes');
+        $año = $this->request->getGet('año');
+        $rol = session()->get('rol');
+        $departamentoSession = session()->get('departamento_id');
+
+        // Obtener evaluaciones
+        if ($rol === 'ADMIN' || $rol === 'EVALUADOR') {
+            $evaluaciones = $this->evaluacionModel->orderBy('fecha_evaluacion', 'DESC')->findAll();
+        } else {
+            // Obtener personas del departamento
+            $personas = $this->personaModel->where('departamento_id', $departamentoSession)->findAll();
+            $personaIds = array_column($personas, 'id');
+            $evaluaciones = $this->evaluacionModel->whereIn('persona_id', $personaIds)
+                ->orderBy('fecha_evaluacion', 'DESC')
+                ->findAll();
+        }
+
+        // Filtrar por departamento y fecha
+        if ($departamentoId || $mes || $año) {
+            $personaIds = [];
+            if ($departamentoId) {
+                $personasDept = $this->personaModel->where('departamento_id', $departamentoId)->findAll();
+                $personaIds = array_column($personasDept, 'id');
+            }
+            
+            $evaluaciones = array_filter($evaluaciones, function($eval) use ($personaIds, $mes, $año, $departamentoId) {
+                if ($departamentoId && !empty($personaIds) && !in_array($eval['persona_id'], $personaIds)) {
+                    return false;
+                }
+                if ($mes && date('m', strtotime($eval['fecha_evaluacion'])) != $mes) {
+                    return false;
+                }
+                if ($año && date('Y', strtotime($eval['fecha_evaluacion'])) != $año) {
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        if ($formato === 'excel') {
+            return $this->exportExcelEvaluaciones($evaluaciones);
+        } elseif ($formato === 'pdf') {
+            return $this->exportPdfEvaluaciones($evaluaciones);
+        }
+
+        $data = [
+            'title' => 'Reporte de Evaluaciones',
+            'evaluaciones' => $evaluaciones,
+            'departamentos' => $this->departamentoModel->findAll(),
+        ];
+
+        return view('reportes/evaluaciones', $data);
+    }
+
+    /**
+     * Reporte de seguimientos
+     */
+    public function seguimientos($formato = 'html')
+    {
+        $departamentoId = $this->request->getGet('departamento');
+        $estado = $this->request->getGet('estado');
+        $rol = session()->get('rol');
+        $departamentoSession = session()->get('departamento_id');
+
+        if ($rol === 'ADMIN' || $rol === 'EVALUADOR') {
+            $seguimientos = $this->seguimientoModel->orderBy('fecha_seguimiento', 'DESC')->findAll();
+        } else {
+            $personas = $this->personaModel->where('departamento_id', $departamentoSession)->findAll();
+            $personaIds = array_column($personas, 'id');
+            $seguimientos = $this->seguimientoModel->whereIn('persona_id', $personaIds)
+                ->orderBy('fecha_seguimiento', 'DESC')
+                ->findAll();
+        }
+
+        // Filtrar
+        if ($departamentoId || $estado) {
+            $personasDept = $this->personaModel->where('departamento_id', $departamentoId)->findAll();
+            $personaIdsDept = array_column($personasDept, 'id');
+            
+            $seguimientos = array_filter($seguimientos, function($seg) use ($personaIdsDept, $estado, $departamentoId) {
+                if ($departamentoId && !in_array($seg['persona_id'], $personaIdsDept)) {
+                    return false;
+                }
+                if ($estado && $seg['estado'] != $estado) {
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        if ($formato === 'excel') {
+            return $this->exportExcelSeguimientos($seguimientos);
+        } elseif ($formato === 'pdf') {
+            return $this->exportPdfSeguimientos($seguimientos);
+        }
+
+        $data = [
+            'title' => 'Reporte de Seguimientos',
+            'seguimientos' => $seguimientos,
+            'departamentos' => $this->departamentoModel->findAll(),
+        ];
+
+        return view('reportes/seguimientos', $data);
+    }
+
+    /**
+     * Exportar a Excel (CSV)
+     */
+    private function exportExcelPersonas($personas)
+    {
+        $filename = 'reporte_personas_' . date('YmdHis') . '.csv';
+        
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        
+        $output = fopen('php://output', 'w');
+        
+        // Encabezados - Todos los campos de caracterización
+        fputcsv($output, [
+            'Número', 'Nacionalidad', 'Cédula', 
+            'Primer Nombre', 'Segundo Nombre', 
+            'Primer Apellido', 'Segundo Apellido',
+            'Sexo', 'Fecha Nacimiento', 'Edad',
+            'Teléfono 1', 'Teléfono 2', 'Correo Electrónico',
+            'Carrera', 'Año/Semestre', 'Posee Beca', 'Sede',
+            'Estado', 'Siglas Universidad', 'Tipo IEU',
+            'Nivel Académico', 'Urbanismo', 'Municipio', 'Parroquia',
+            'Tiene Hijos', 'Cantidad Hijos', 
+            'Posee Discapacidad', 'Descripción Discapacidad',
+            'Presenta Enfermedad', 'Condición Médica', 'Medicamentos',
+            'Trabaja', 'Tipo Empleo', 'Medio Transporte',
+            'Inscrito CNE', 'Centro Electoral', 'Comuna',
+            'Estado Civil', 'Talla Camisa', 'Talla Zapatos',
+            'Talla Pantalón', 'Altura', 'Peso', 'Tipo Sangre',
+            'Carga Familiar', 'Departamento', 'Fecha Registro', 'Estado'
+        ], ';');
+        
+        foreach ($personas as $p) {
+            $departamento = $this->departamentoModel->find($p['departamento_id']);
+            fputcsv($output, [
+                $p['numero'] ?? '',
+                $p['nacionalidad'] ?? '',
+                $p['cedula'] ?? '',
+                $p['primer_nombre'] ?? '',
+                $p['segundo_nombre'] ?? '',
+                $p['primer_apellido'] ?? '',
+                $p['segundo_apellido'] ?? '',
+                $p['sexo'] ?? '',
+                $p['fecha_nacimiento'] ?? '',
+                $p['edad'] ?? '',
+                $p['telefono1'] ?? '',
+                $p['telefono2'] ?? '',
+                $p['correo_electronico'] ?? '',
+                $p['carrera'] ?? '',
+                $p['ano_semestre'] ?? '',
+                $p['posee_beca'] ?? '',
+                $p['sede'] ?? '',
+                $p['estado'] ?? '',
+                $p['siglas_universidad'] ?? '',
+                $p['tipo_ieu'] ?? '',
+                $p['nivel_academico'] ?? '',
+                $p['urbanismo'] ?? '',
+                $p['municipio'] ?? '',
+                $p['parroquia'] ?? '',
+                $p['tiene_hijos'] ?? '',
+                $p['cantidad_hijos'] ?? '',
+                $p['posee_discapacidad'] ?? '',
+                $p['descripcion_discapacidad'] ?? '',
+                $p['presenta_enfermedad'] ?? '',
+                $p['condicion_medica'] ?? '',
+                $p['medicamentos'] ?? '',
+                $p['trabaja'] ?? '',
+                $p['tipo_empleo'] ?? '',
+                $p['medio_transporte'] ?? '',
+                $p['inscrito_cne'] ?? '',
+                $p['centro_electoral'] ?? '',
+                $p['comuna'] ?? '',
+                $p['estado_civil'] ?? '',
+                $p['talla_camisa'] ?? '',
+                $p['talla_zapatos'] ?? '',
+                $p['talla_pantalon'] ?? '',
+                $p['altura'] ?? '',
+                $p['peso'] ?? '',
+                $p['tipo_sangre'] ?? '',
+                $p['carga_familiar'] ?? '',
+                $departamento['nombre'] ?? '',
+                $p['fecha_registro'] ?? '',
+                $p['estado_registro'] ?? ''
+            ], ';');
+        }
+        
+        fclose($output);
+        exit;
+    }
+
+    private function exportExcelEvaluaciones($evaluaciones)
+    {
+        $filename = 'reporte_evaluaciones_' . date('YmdHis') . '.csv';
+        
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        
+        $output = fopen('php://output', 'w');
+        
+        fputcsv($output, [
+            'Fecha', 'Persona', 'Tipo', 'Asistencia', 'Puntualidad', 
+            'Trabajo Equipo', 'Iniciativa', 'Total', 'Resultado'
+        ], ';');
+        
+        foreach ($evaluaciones as $e) {
+            $persona = $this->personaModel->find($e['persona_id']);
+            $nombre = $persona ? $persona['primer_nombre'] . ' ' . $persona['primer_apellido'] : 'N/A';
+            
+            fputcsv($output, [
+                $e['fecha_evaluacion'],
+                $nombre,
+                $e['tipo_evaluacion'],
+                $e['asistencia'],
+                $e['puntualidad'],
+                $e['trabajo_equipo'],
+                $e['iniciativa'],
+                $e['puntuacion_total'],
+                $e['resultado']
+            ], ';');
+        }
+        
+        fclose($output);
+        exit;
+    }
+
+    private function exportExcelSeguimientos($seguimientos)
+    {
+        $filename = 'reporte_seguimientos_' . date('YmdHis') . '.csv';
+        
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        
+        $output = fopen('php://output', 'w');
+        
+        fputcsv($output, [
+            'Fecha', 'Persona', 'Tipo', 'Estado', 'Prioridad', 'Descripción'
+        ], ';');
+        
+        foreach ($seguimientos as $s) {
+            $persona = $this->personaModel->find($s['persona_id']);
+            $nombre = $persona ? $persona['primer_nombre'] . ' ' . $persona['primer_apellido'] : 'N/A';
+            
+            fputcsv($output, [
+                $s['fecha_seguimiento'],
+                $nombre,
+                $s['tipo_seguimiento'],
+                $s['estado'],
+                $s['prioridad'],
+                substr($s['descripcion'] ?? '', 0, 100)
+            ], ';');
+        }
+        
+        fclose($output);
+        exit;
+    }
+
+    /**
+     * Exportar a PDF (HTML para imprimir)
+     */
+    private function exportPdfPersonas($personas)
+    {
+        $data = [
+            'title' => 'Reporte de Personas',
+            'personas' => $personas,
+            'fecha' => date('d/m/Y H:i'),
+        ];
+
+        // Cargar vista como string
+        $html = view('reportes/pdf/personas', $data);
+        
+        return $this->response->setContentType('text/html')
+            ->setBody($html);
+    }
+
+    private function exportPdfEvaluaciones($evaluaciones)
+    {
+        $data = [
+            'title' => 'Reporte de Evaluaciones',
+            'evaluaciones' => $evaluaciones,
+            'fecha' => date('d/m/Y H:i'),
+        ];
+
+        $html = view('reportes/pdf/evaluaciones', $data);
+        
+        return $this->response->setContentType('text/html')
+            ->setBody($html);
+    }
+
+    private function exportPdfSeguimientos($seguimientos)
+    {
+        $data = [
+            'title' => 'Reporte de Seguimientos',
+            'seguimientos' => $seguimientos,
+            'fecha' => date('d/m/Y H:i'),
+        ];
+
+        $html = view('reportes/pdf/seguimientos', $data);
+        
+        return $this->response->setContentType('text/html')
+            ->setBody($html);
+    }
+}

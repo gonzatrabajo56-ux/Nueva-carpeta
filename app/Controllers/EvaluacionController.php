@@ -188,4 +188,55 @@ class EvaluacionController extends BaseController
         return redirect()->to('/evaluaciones?persona_id=' . $personaId)
             ->with('success', 'Evaluación eliminada exitosamente');
     }
+
+    /**
+     * Muestra el empleado del mes
+     */
+    public function empleadoDelMes()
+    {
+        $mes = $this->request->getGet('mes') ?? date('Y-m');
+        
+        $empleado_mes = $this->evaluacionModel->getEmpleadoDelMes($mes);
+        $candidatos = $this->evaluacionModel->getCandidatosEmpleadoDelMes($mes);
+
+        $data = [
+            'title'            => 'Empleado del Mes',
+            'empleado_mes'    => $empleado_mes,
+            'candidatos'       => $candidatos,
+            'mes_seleccionado' => $mes,
+        ];
+
+        return view('evaluaciones/empleado_del_mes', $data);
+    }
+
+    /**
+     * Selecciona el empleado del mes
+     */
+    public function seleccionarEmpleadoDelMes($id)
+    {
+        $evaluacion = $this->evaluacionModel->find($id);
+
+        if (!$evaluacion) {
+            return redirect()->to('/evaluaciones/empleado-del-mes')
+                ->with('error', 'Evaluación no encontrada');
+        }
+
+        $mes = $this->request->getPost('mes');
+        
+        // Quitar empleado anterior del mes
+        $this->evaluacionModel
+            ->where('mes_evaluado', $mes)
+            ->where('es_empleado_mes', 'S')
+            ->set(['es_empleado_mes' => 'N'])
+            ->update();
+
+        // Establecer nuevo empleado del mes
+        $this->evaluacionModel->update($id, [
+            'es_empleado_mes' => 'S',
+            'mes_evaluado'    => $mes,
+        ]);
+
+        return redirect()->to('/evaluaciones/empleado-del-mes?mes=' . $mes)
+            ->with('success', 'Empleado del mes seleccionado exitosamente');
+    }
 }
