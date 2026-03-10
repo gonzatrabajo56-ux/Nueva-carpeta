@@ -60,14 +60,14 @@
             padding: 10px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-                <td><?= ($p['primer_apellido'] ?? '') . ' ' . ($p['segundo_apellido'] ?? '') ?></td>
-                <td><?= $p['sexo'] ?? '' ?></td>
-                <td><?= $p['fecha_nacimiento'] ?? '' ?></td>
-                <td><?= $p['edad'] ?? '' ?></td>
-                <td><?= $p['telefono1'] ?? '' ?></td>
-                <td><?= $p['correo_electronico'] ?? '' ?></td>
-                <td><?= $p['posee_beca'] ?? '' ?></td>
-                <td><?= $p['sede'] ?? '' ?></td>
+            border-radius: 8px;
+        }
+        
+        .company-info h2 {
+            font-size: 18px;
+        }
+        
+        .company-info p {
                 <td><?= $p['siglas_universidad'] ?? '' ?></td>
                 <td><?= $p['municipio'] ?? '' ?></td>
                 <td><?= $p['cantidad_hijos'] ?? '' ?></td>
