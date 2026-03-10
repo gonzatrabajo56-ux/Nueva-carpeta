@@ -77,6 +77,71 @@
         </div>
     </div>
 
+    <!-- Gráficos -->
+    <div class="row mb-4">
+        <!-- Gráfico de Personal por Departamento -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Personal por Departamento</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartDepartamentos"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gráfico de Evaluaciones por Mes -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-line-chart"></i> Evaluaciones por Mes</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartEvaluaciones"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Gráfico de Género -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Distribución por Género</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartGenero"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gráfico de Discapacidad -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Personas con Discapacidad</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartDiscapacidad"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gráfico de Estado de Seguimientos -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Estado de Seguimientos</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartSeguimientos"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Alertas -->
     <div class="row mb-4">
         <div class="col-md-6">
@@ -159,4 +224,188 @@
         </div>
     </div>
 </div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Gráfico de Personal por Departamento
+const ctxDept = document.getElementById('chartDepartamentos').getContext('2d');
+new Chart(ctxDept, {
+    type: 'bar',
+    data: {
+        labels: <?= json_encode($chart_data['labels_dept'] ?? []) ?>,
+        datasets: [{
+            label: 'Personal',
+            data: <?= json_encode($chart_data['data_dept'] ?? []) ?>,
+            backgroundColor: [
+                'rgba(54, 162, 235, 0.7)',
+                'rgba(255, 99, 132, 0.7)',
+                'rgba(255, 206, 86, 0.7)',
+                'rgba(75, 192, 192, 0.7)',
+                'rgba(153, 102, 255, 0.7)',
+                'rgba(255, 159, 64, 0.7)',
+                'rgba(199, 199, 199, 0.7)',
+                'rgba(83, 102, 255, 0.7)',
+                'rgba(40, 159, 64, 0.7)',
+                'rgba(210, 99, 132, 0.7)'
+            ],
+            borderColor: [
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 99, 132, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)',
+                'rgba(199, 199, 199, 1)',
+                'rgba(83, 102, 255, 1)',
+                'rgba(40, 159, 64, 1)',
+                'rgba(210, 99, 132, 1)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+
+// Gráfico de Evaluaciones por Mes
+const ctxEval = document.getElementById('chartEvaluaciones').getContext('2d');
+new Chart(ctxEval, {
+    type: 'line',
+    data: {
+        labels: <?= json_encode($chart_data['labels_meses'] ?? []) ?>,
+        datasets: [{
+            label: 'Evaluaciones',
+            data: <?= json_encode($chart_data['data_evaluaciones'] ?? []) ?>,
+            fill: true,
+            backgroundColor: 'rgba(40, 167, 69, 0.2)',
+            borderColor: 'rgba(40, 167, 69, 1)',
+            tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+
+// Gráfico de Género
+const ctxGenero = document.getElementById('chartGenero').getContext('2d');
+new Chart(ctxGenero, {
+    type: 'doughnut',
+    data: {
+        labels: ['Masculino', 'Femenino'],
+        datasets: [{
+            data: [<?= $chart_data['hombres'] ?? 0 ?>, <?= $chart_data['mujeres'] ?? 0 ?>],
+            backgroundColor: [
+                'rgba(54, 162, 235, 0.7)',
+                'rgba(255, 99, 132, 0.7)'
+            ],
+            borderColor: [
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 99, 132, 1)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Gráfico de Discapacidad
+const ctxDiscapacidad = document.getElementById('chartDiscapacidad').getContext('2d');
+new Chart(ctxDiscapacidad, {
+    type: 'doughnut',
+    data: {
+        labels: ['Con Discapacidad', 'Sin Discapacidad'],
+        datasets: [{
+            data: [<?= $chart_data['con_discapacidad'] ?? 0 ?>, <?= $chart_data['sin_discapacidad'] ?? 0 ?>],
+            backgroundColor: [
+                'rgba(255, 193, 7, 0.7)',
+                'rgba(108, 117, 125, 0.7)'
+            ],
+            borderColor: [
+                'rgba(255, 193, 7, 1)',
+                'rgba(108, 117, 125, 1)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Gráfico de Estado de Seguimientos
+const ctxSeg = document.getElementById('chartSeguimientos').getContext('2d');
+new Chart(ctxSeg, {
+    type: 'doughnut',
+    data: {
+        labels: ['Pendientes', 'En Proceso', 'Completados'],
+        datasets: [{
+            data: [
+                <?= $chart_data['seg_pendientes'] ?? 0 ?>, 
+                <?= $chart_data['seg_en_proceso'] ?? 0 ?>, 
+                <?= $chart_data['seg_completados'] ?? 0 ?>
+            ],
+            backgroundColor: [
+                'rgba(255, 193, 7, 0.7)',
+                'rgba(23, 162, 184, 0.7)',
+                'rgba(40, 167, 69, 0.7)'
+            ],
+            borderColor: [
+                'rgba(255, 193, 7, 1)',
+                'rgba(23, 162, 184, 1)',
+                'rgba(40, 167, 69, 1)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+</script>
 <?= $this->endSection() ?>

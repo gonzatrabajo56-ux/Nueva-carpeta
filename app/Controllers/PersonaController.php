@@ -224,6 +224,31 @@ class PersonaController extends BaseController
             $data['edad'] = $this->personaModel->calcularEdad($data['fecha_nacimiento']);
         }
 
+        // Manejar eliminación de foto
+        if (isset($data['eliminar_foto']) && $data['eliminar_foto'] == '1') {
+            try {
+                $this->personaModel->deleteFoto($id);
+            } catch (\Exception $e) {
+                // Ignorar errores al eliminar
+            }
+        }
+
+        // Manejar nueva foto
+        $file = $this->request->getFile('foto');
+        if ($file && $file->isValid() && $file->getError() !== UPLOAD_ERR_NO_FILE) {
+            try {
+                $newName = $this->personaModel->uploadFoto($id, $file);
+                $data['foto'] = $newName;
+            } catch (\Exception $e) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'Error al subir la foto: ' . $e->getMessage());
+            }
+        }
+
+        // Eliminar campos de foto del array de datos
+        unset($data['eliminar_foto']);
+
         $this->personaModel->update($id, $data);
 
         return redirect()->to('/personas/show/' . $id)

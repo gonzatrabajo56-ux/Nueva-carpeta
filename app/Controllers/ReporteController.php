@@ -197,9 +197,15 @@ class ReporteController extends BaseController
         
         $output = fopen('php://output', 'w');
         
+        // Encabezado de la empresa
+        fputcsv($output, ['REPORTE DE CARACTERIZACIÓN - SISTEMA AURYS'], ';');
+        fputcsv($output, ['Fecha de generación: ' . date('d/m/Y H:i:s')], ';');
+        fputcsv($output, ['Total de personas: ' . count($personas)], ';');
+        fputcsv($output, [], ';');
+        
         // Encabezados - Todos los campos de caracterización
         fputcsv($output, [
-            'Número', 'Nacionalidad', 'Cédula', 
+            'N°', 'Número', 'Nacionalidad', 'Cédula', 
             'Primer Nombre', 'Segundo Nombre', 
             'Primer Apellido', 'Segundo Apellido',
             'Sexo', 'Fecha Nacimiento', 'Edad',
@@ -217,9 +223,11 @@ class ReporteController extends BaseController
             'Carga Familiar', 'Departamento', 'Fecha Registro', 'Estado'
         ], ';');
         
+        $num = 1;
         foreach ($personas as $p) {
             $departamento = $this->departamentoModel->find($p['departamento_id']);
             fputcsv($output, [
+                $num++,
                 $p['numero'] ?? '',
                 $p['nacionalidad'] ?? '',
                 $p['cedula'] ?? '',
