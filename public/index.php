@@ -1,102 +1,59 @@
 <?php
-/**
- * Punto de entrada principal
- * Sistema de Evaluación, Seguimiento y Caracterización
+
+use CodeIgniter\Boot;
+use Config\Paths;
+
+/*
+ *---------------------------------------------------------------
+ * CHECK PHP VERSION
+ *---------------------------------------------------------------
  */
 
-// Iniciar sesión
-session_start();
+$minPhpVersion = '8.2'; // If you update this, don't forget to update `spark`.
+if (version_compare(PHP_VERSION, $minPhpVersion, '<')) {
+    $message = sprintf(
+        'Your PHP version must be %s or higher to run CodeIgniter. Current version: %s',
+        $minPhpVersion,
+        PHP_VERSION,
+    );
 
-// Cargar configuración
-require_once __DIR__ . '/../config/database.php';
+    header('HTTP/1.1 503 Service Unavailable.', true, 503);
+    echo $message;
 
-// Obtener la URL solicitada
-$requestUri = $_SERVER['REQUEST_URI'];
-$scriptName = dirname($_SERVER['SCRIPT_NAME']);
-
-// Limpiar la URI - remover query string también
-$path = str_replace($scriptName, '', $requestUri);
-$path = trim($path, '/');
-$path = preg_replace('/\?.*/', '', $path);
-
-// Si está vacío o index.php, usar HomeController
-if (empty($path) || $path === 'index.php' || $path === '') {
-    $controllerName = 'Home';
-    $method = 'index';
-    $params = [];
-} else {
-    // Parsear la ruta
-    $parts = explode('/', $path);
-    $controllerName = isset($parts[0]) && !empty($parts[0]) ? ucfirst($parts[0]) : 'Home';
-    $method = isset($parts[1]) && !empty($parts[1]) ? $parts[1] : 'index';
-    $params = array_slice($parts, 2);
+    exit(1);
 }
 
-// Mapear controladores
-$controllerMap = [
-    // Controladores disponibles
-    'home' => 'HomeController',
-    '' => 'HomeController',
-    'login' => 'LoginController',
-    'persona' => 'PersonaController',
-    'personas' => 'PersonaController',
-    'evaluacion' => 'EvaluacionController',
-    'evaluaciones' => 'EvaluacionController',
-    'seguimiento' => 'SeguimientoController',
-    'seguimientos' => 'SeguimientoController',
-    'usuario' => 'UsuarioController',
-    'usuarios' => 'UsuarioController'
-];
+/*
+ *---------------------------------------------------------------
+ * SET THE CURRENT DIRECTORY
+ *---------------------------------------------------------------
+ */
 
-// Determinar el controlador
-$controllerFileName = strtolower($controllerName);
-if (isset($controllerMap[$controllerFileName])) {
-    $controllerClass = $controllerMap[$controllerFileName];
-} else {
-    $controllerClass = $controllerName . 'Controller';
+// Path to the front controller (this file)
+define('FCPATH', __DIR__ . DIRECTORY_SEPARATOR);
+
+// Ensure the current directory is pointing to the front controller's directory
+if (getcwd() . DIRECTORY_SEPARATOR !== FCPATH) {
+    chdir(FCPATH);
 }
 
-// Ruta al archivo del controlador
-$controllerFile = __DIR__ . '/../app/Controllers/' . $controllerClass . '.php';
+/*
+ *---------------------------------------------------------------
+ * BOOTSTRAP THE APPLICATION
+ *---------------------------------------------------------------
+ * This process sets up the path constants, loads and registers
+ * our autoloader, along with Composer's, loads our constants
+ * and fires up an environment-specific bootstrapping.
+ */
 
-if (file_exists($controllerFile)) {
-    require_once $controllerFile;
-    
-    // Verificar que la clase existe
-    if (class_exists($controllerClass)) {
-        // Instanciar controlador
-        $controller = new $controllerClass();
-        
-        // Verificar que el método existe
-        if (method_exists($controller, $method)) {
-            // Llamar al método con parámetros
-            call_user_func_array([$controller, $method], $params);
-        } else {
-            // Método no encontrado - intentar con 'index'
-            if (method_exists($controller, 'index')) {
-                call_user_func_array([$controller, 'index'], $params);
-            } else {
-                http_response_code(404);
-                echo "<h1>404 - Método no encontrado</h1>";
-                echo "<p>El método '{$method}' no existe en el controlador '{$controllerClass}'</p>";
-                echo "<p><a href='/dashboard'>Volver al Dashboard</a></p>";
-            }
-        }
-    } else {
-        http_response_code(500);
-        echo "<h1>500 - Error de Servidor</h1>";
-        echo "<p>La clase '{$controllerClass}' no existe</p>";
-    }
-} else {
-    // Controlador no encontrado
-    http_response_code(404);
-    echo "<!DOCTYPE html>";
-    echo "<html><head><title>404 - No Encontrado</title>";
-    echo "<style>body{font-family:Arial,sans-serif;margin:40px;}";
-    echo "h1{color:#667eea;}a{color:#667eea;text-decoration:none;}</style>";
-    echo "</head><body>";
-    echo "<h1>404 - Página No Encontrada</h1>";
-    echo "<p>El controlador '{$controllerClass}' no existe</p>";
-    echo "<p><a href='/dashboard'>Volver al Dashboard</a></p>";
-    echo "</body></html>";
-}
+// LOAD OUR PATHS CONFIG FILE
+// This is the line that might need to be changed, depending on your folder structure.
+require FCPATH . '../app/Config/Paths.php';
+// ^^^ Change this line if you move your application folder
+
+$paths = new Paths();
+
+// LOAD THE FRAMEWORK BOOTSTRAP FILE
+require $paths->systemDirectory . '/Boot.php';
+
+exit(Boot::bootWeb($paths));

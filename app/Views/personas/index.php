@@ -1,86 +1,99 @@
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2"><i class="bi bi-people"></i> Personas</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="/personas/create" class="btn btn-sm btn-primary">
+<?= $this->extend('layout/main') ?>
+
+<?= $this->section('content') ?>
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Lista de Personas</h2>
+        <a href="<?= base_url('/personas/create') ?>" class="btn btn-primary">
             <i class="bi bi-plus-circle"></i> Nueva Persona
         </a>
     </div>
-</div>
 
-<!-- Buscador -->
-<form method="GET" action="/personas" class="mb-4">
-    <div class="input-group">
-        <input type="text" name="search" class="form-control" placeholder="Buscar por nombre, apellido o cédula..." value="<?= htmlspecialchars($search ?? '') ?>">
-        <button type="submit" class="btn btn-outline-secondary">
-            <i class="bi bi-search"></i> Buscar
-        </button>
-        <?php if (!empty($search)): ?>
-            <a href="/personas" class="btn btn-outline-danger">Limpiar</a>
-        <?php endif; ?>
-    </div>
-</form>
-
-<!-- Tabla de personas -->
-<div class="table-responsive">
-    <table class="table table-striped table-hover">
-        <thead class="table-dark">
-            <tr>
-                <th>ID</th>
-                <th>Cédula</th>
-                <th>Nombres</th>
-                <th>Apellidos</th>
-                <th>Sexo</th>
-                <th>Edad</th>
-                <th>Teléfono</th>
-                <th>Universidad</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if (empty($personas)): ?>
-                <tr>
-                    <td colspan="9" class="text-center">No hay registros</td>
-                </tr>
-            <?php else: ?>
-                <?php foreach ($personas as $p): ?>
-                    <tr>
-                        <td><?= $p['id'] ?></td>
-                        <td><?= htmlspecialchars($p['cedula'] ?? '') ?></td>
-                        <td><?= htmlspecialchars(($p['primer_nombre'] ?? '') . ' ' . ($p['segundo_nombre'] ?? '')) ?></td>
-                        <td><?= htmlspecialchars(($p['primer_apellido'] ?? '') . ' ' . ($p['segundo_apellido'] ?? '')) ?></td>
-                        <td><?= htmlspecialchars($p['sexo'] ?? '') ?></td>
-                        <td><?= $p['edad'] ?? '-' ?></td>
-                        <td><?= htmlspecialchars($p['telefono_1'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($p['siglas_universidad'] ?? '') ?></td>
-                        <td>
-                            <a href="/personas/show/<?= $p['id'] ?>" class="btn btn-sm btn-info" title="Ver">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <a href="/personas/edit/<?= $p['id'] ?>" class="btn btn-sm btn-warning" title="Editar">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                            <a href="/personas/delete/<?= $p['id'] ?>" class="btn btn-sm btn-danger" title="Eliminar" onclick="return confirm('¿Está seguro de eliminar este registro?')">
-                                <i class="bi bi-trash"></i>
-                            </a>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </tbody>
-    </table>
-</div>
-
-<!-- Paginación -->
-<?php if (isset($totalPages) && $totalPages > 1): ?>
-    <nav>
-        <ul class="pagination justify-content-center">
-            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                <li class="page-item <?= $i == $page ? 'active' : '' ?>">
-                    <a class="page-link" href="?page=<?= $i ?><?= !empty($search) ? '&search=' . urlencode($search) : '' ?>">
-                        <?= $i ?>
+    <!-- Buscador -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" action="<?= base_url('/personas') ?>" class="d-flex gap-2">
+                <input type="text" name="q" class="form-control" 
+                       placeholder="Buscar por nombre, apellido o cédula..."
+                       value="<?= $busqueda ?? '' ?>">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+                <?php if ($busqueda): ?>
+                    <a href="<?= base_url('/personas') ?>" class="btn btn-outline-secondary">
+                        Limpiar
                     </a>
-                </li>
-            <?php endfor; ?>
-        </ul>
-    </nav>
-<?php endif; ?>
+                <?php endif; ?>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de Personas -->
+    <div class="card">
+        <div class="card-body">
+            <?php if (empty($personas)): ?>
+                <div class="text-center py-5">
+                    <i class="bi bi-people fs-1 text-muted"></i>
+                    <p class="text-muted mt-2">No hay personas registradas</p>
+                    <a href="<?= base_url('/personas/create') ?>" class="btn btn-primary">
+                        Registrar primera persona
+                    </a>
+                </div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Cédula</th>
+                                <th>Nombre Completo</th>
+                                <th>Teléfono</th>
+                                <th>Correo</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($personas as $p): ?>
+                            <tr>
+                                <td><?= $p['cedula'] ?></td>
+                                <td><?= $p['primer_nombre'] . ' ' . $p['primer_apellido'] ?></td>
+                                <td><?= $p['telefono1'] ?? '-' ?></td>
+                                <td><?= $p['correo_electronico'] ?? '-' ?></td>
+                                <td>
+                                    <span class="badge bg-<?= $p['estado_registro'] == 'ACTIVO' ? 'success' : 'secondary' ?>">
+                                        <?= $p['estado_registro'] ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="<?= base_url('/personas/show/' . $p['id']) ?>" 
+                                           class="btn btn-sm btn-outline-primary" title="Ver">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="<?= base_url('/personas/edit/' . $p['id']) ?>" 
+                                           class="btn btn-sm btn-outline-warning" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="<?= base_url('/evaluaciones/create?persona_id=' . $p['id']) ?>" 
+                                           class="btn btn-sm btn-outline-info" title="Evaluar">
+                                            <i class="bi bi-clipboard-check"></i>
+                                        </a>
+                                        <a href="<?= base_url('/seguimientos/create?persona_id=' . $p['id']) ?>" 
+                                           class="btn btn-sm btn-outline-success" title="Seguimiento">
+                                            <i class="bi bi-journal-plus"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Paginación -->
+                <?= $pager->links() ?>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?= $this->endSection() ?>

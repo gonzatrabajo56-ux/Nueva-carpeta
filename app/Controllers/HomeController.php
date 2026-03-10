@@ -1,89 +1,82 @@
 <?php
-/**
- * Controlador Principal / Home
- * Sistema de Evaluación, Seguimiento y Caracterización
- */
 
-require_once __DIR__ . '/Controller.php';
-require_once __DIR__ . '/../Models/Persona.php';
-require_once __DIR__ . '/../Models/Evaluacion.php';
-require_once __DIR__ . '/../Models/Seguimiento.php';
-require_once __DIR__ . '/../Models/Usuario.php';
+namespace App\Controllers;
 
-class HomeController extends Controller {
-    private $personaModel;
-    private $evaluacionModel;
-    private $seguimientoModel;
-    private $usuarioModel;
-    
-    public function __construct() {
-        parent::__construct();
-        $this->personaModel = new Persona();
-        $this->evaluacionModel = new Evaluacion();
-        $this->seguimientoModel = new Seguimiento();
-        $this->usuarioModel = new Usuario();
+use App\Models\PersonaModel;
+use App\Models\EvaluacionModel;
+use App\Models\SeguimientoModel;
+
+class HomeController extends BaseController
+{
+    protected $personaModel;
+    protected $evaluacionModel;
+    protected $seguimientoModel;
+
+    public function __construct()
+    {
+        $this->personaModel = new PersonaModel();
+        $this->evaluacionModel = new EvaluacionModel();
+        $this->seguimientoModel = new SeguimientoModel();
     }
-    
+
     /**
-     * Página de inicio - Redirecciona según autenticación
+     * Página principal - redirige a login o dashboard
      */
-    public function index() {
-        // Si está logueado, redirigir al dashboard
-        if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
-            $this->redirect('/dashboard');
-        } else {
-            // Si no está logueado, redirigir al login
-            $this->redirect('/login');
+    public function index()
+    {
+        if (!session()->get('isLoggedIn')) {
+            return redirect()->to('/login');
         }
+
+        return redirect()->to('/dashboard');
     }
-    
+
     /**
-     * Dashboard - Panel principal
+     * Dashboard principal
      */
-    public function dashboard() {
-        // Verificar autenticación
-        if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
-            $this->redirect('/login');
+    public function dashboard()
+    {
+        if (!session()->get('isLoggedIn')) {
+            return redirect()->to('/login');
         }
+
+        // Estadísticas
+        $statsPersonas = $this->personaModel->getEstadisticas();
         
-        // Obtener estadísticas
-        $stats = [
-            'total_personas' => $this->personaModel->count(),
-            'total_evaluaciones' => $this->evaluacionModel->count(),
-            'total_seguimientos' => $this->seguimientoModel->count(),
-            'total_usuarios' => $this->usuarioModel->count()
+        $totalEvaluaciones = $this->evaluacionModel->countAll();
+        $totalSeguimientos = $this->seguimientoModel->countAll();
+        
+        $seguimientosPendientes = $this->seguimientoModel->where('estado', 'PENDIENTE')->countAllResults();
+        $seguimientosProximos = count($this->seguimientoModel->getSeguimientosProximos());
+
+        $data = [
+            'title'        => 'Dashboard',
+            'stats'        => [
+                'personas_total'      => $statsPersonas['total'],
+                'personas_activas'    => $statsPersonas['activos'],
+                'evaluaciones'       => $totalEvaluaciones,
+                'seguimientos'       => $totalSeguimientos,
+                'pendientes'         => $seguimientosPendientes,
+                'proximos'           => $seguimientosProximos,
+            ],
+            'seguimientos_recientes' => $this->seguimientoModel
+                ->orderBy('created_at', 'DESC')
+                ->limit(5)
+                ->findAll(),
         ];
-        
-        // Obtener seguimientos activos
-        $seguimientosActivos = $this->seguimientoModel->getActivos();
-        
-        // Obtener evaluaciones pendientes
-        $evaluacionesPendientes = $this->evaluacionModel->getPendientes();
-        
-        $this->view('home/dashboard', [
-            'stats' => $stats,
-            'seguimientosActivos' => $seguimientosActivos,
-            'evaluacionesPendientes' => $evaluacionesPendientes,
-            'message' => $this->getMessage()
-        ]);
+
+        return view('home/dashboard', $data);
     }
-    
+
     /**
-     * Acerca de
+     * Página de inicio sin login
      */
-    public function about() {
-        $this->view('home/about', [
-            'message' => $this->getMessage()
-        ]);
-    }
-    
-    /**
-     * Página no encontrada
-     */
-    public function notFound() {
-        http_response_code(404);
-        $this->view('home/notFound', [
-            'message' => $this->getMessage()
-        ]);
+    public function welcome()
+    {
+        $data = [
+            'title' => 'Sistema de Caracterización',
+        ];
+
+        return view('home/welcome', $data);
     }
 }

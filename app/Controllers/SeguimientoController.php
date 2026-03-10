@@ -1,249 +1,252 @@
 <?php
-/**
- * Controlador de Seguimientos
- * Sistema de Evaluación, Seguimiento y Caracterización
- */
 
-require_once __DIR__ . '/Controller.php';
-require_once __DIR__ . '/../Models/Seguimiento.php';
-require_once __DIR__ . '/../Models/Persona.php';
+namespace App\Controllers;
 
-class SeguimientoController extends Controller {
-    private $seguimientoModel;
-    private $personaModel;
-    
-    public function __construct() {
-        parent::__construct();
-        $this->seguimientoModel = new Seguimiento();
-        $this->personaModel = new Persona();
+use App\Models\SeguimientoModel;
+use App\Models\PersonaModel;
+
+class SeguimientoController extends BaseController
+{
+    protected $seguimientoModel;
+    protected $personaModel;
+
+    public function __construct()
+    {
+        $this->seguimientoModel = new SeguimientoModel();
+        $this->personaModel = new PersonaModel();
     }
-    
+
     /**
-     * Obtener tipos de seguimiento desde la base de datos
+     * Lista todos los seguimientos
      */
-    private function getTiposSeguimiento() {
-        $db = Database::getInstance()->getConnection();
-        $stmt = $db->query("SELECT * FROM tipos_seguimiento WHERE activo = 1 ORDER BY nombre ASC");
-        return $stmt->fetchAll();
-    }
-    
-    /**
-     * Index - Listar todos los seguimientos
-     */
-    public function index() {
-        $page = $this->getInputValue('page', 1);
-        $search = $this->getInputValue('search', '');
-        $estado = $this->getInputValue('estado', '');
+    public function index()
+    {
+        $personaId = $this->request->getGet('persona_id');
+        $estado = $this->request->getGet('estado');
         
-        $seguimientos = $this->seguimientoModel->paginate($page, Config::ITEMS_PER_PAGE);
-        $total = $this->seguimientoModel->count();
-        $totalPages = ceil($total / Config::ITEMS_PER_PAGE);
-        
-        $tiposSeguimiento = $this->getTiposSeguimiento();
-        
-        $this->view('seguimientos/index', [
+        if ($personaId) {
+            $seguimientos = $this->seguimientoModel->getSeguimientosPorPersona($personaId);
+            $persona = $this->personaModel->find($personaId);
+            $titulo = 'Seguimientos de: ' . ($persona ? $persona['primer_nombre'] . ' ' . $persona['primer_apellido'] : 'Desconocido');
+        } elseif ($estado) {
+            $seguimientos = $this->seguimientoModel->getSeguimientosPorEstado($estado);
+            $titulo = 'Seguimientos - ' . ucfirst($estado);
+            $persona = null;
+        } else {
+            $seguimientos = $this->seguimientoModel->orderBy('fecha_seguimiento', 'DESC')->findAll();
+            $titulo = 'Lista de Seguimientos';
+            $persona = null;
+        }
+
+        $data = [
+            'title'       => $titulo,
             'seguimientos' => $seguimientos,
-            'page' => $page,
-            'totalPages' => $totalPages,
-            'search' => $search,
-            'estado' => $estado,
-            'tiposSeguimiento' => $tiposSeguimiento,
-            'message' => $this->getMessage()
-        ]);
-    }
-    
-    /**
-     * Mostrar formulario de creación
-     */
-    public function create() {
-        $personas = $this->personaModel->all();
-        $tiposSeguimiento = $this->getTiposSeguimiento();
-        
-        $this->view('seguimientos/create', [
-            'personas' => $personas,
-            'tiposSeguimiento' => $tiposSeguimiento,
-            'message' => $this->getMessage()
-        ]);
-    }
-    
-    /**
-     * Guardar nuevo seguimiento
-     */
-    public function store() {
-        if (!$this->isPost()) {
-            $this->redirect('/seguimientos/create');
-        }
-        
-        $data = $this->getInput();
-        
-        // Validar datos requeridos
-        $rules = [
-            'persona_id' => 'required|numeric',
-            'tipo_seguimiento_id' => 'required|numeric',
-            'fecha_seguimiento' => 'required',
-            'descripcion' => 'required'
+            'persona_id'  => $personaId,
+            'persona'     => $persona,
+            'estado'      => $estado,
         ];
-        
-        $errors = $this->validate($data, $rules);
-        
-        if (!empty($errors)) {
-            $_SESSION['errors'] = $errors;
-            $_SESSION['old_input'] = $data;
-            $this->redirect('/seguimientos/create');
-        }
-        
-        try {
-            $this->seguimientoModel->create($data);
-            $this->redirectWith('/seguimientos', 'Seguimiento creado correctamente', 'success');
-        } catch (Exception $e) {
-            $this->redirectWith('/seguimientos/create', 'Error al crear seguimiento: ' . $e->getMessage(), 'error');
-        }
+
+        return view('seguimientos/index', $data);
     }
-    
+
     /**
-     * Mostrar formulario de edición
+     * Muestra el formulario para crear un seguimiento
      */
-    public function edit($id = null) {
-        if (!$id) {
-            $this->redirect('/seguimientos');
-        }
-        
-        $seguimiento = $this->seguimientoModel->find($id);
-        
-        if (!$seguimiento) {
-            $this->redirectWith('/seguimientos', 'Seguimiento no encontrado', 'error');
-        }
-        
-        $personas = $this->personaModel->all();
-        $tiposSeguimiento = $this->getTiposSeguimiento();
-        
-        $this->view('seguimientos/edit', [
-            'seguimiento' => $seguimiento,
-            'personas' => $personas,
-            'tiposSeguimiento' => $tiposSeguimiento,
-            'message' => $this->getMessage()
-        ]);
-    }
-    
-    /**
-     * Actualizar seguimiento
-     */
-    public function update($id = null) {
-        if (!$this->isPost() || !$id) {
-            $this->redirect('/seguimientos');
-        }
-        
-        $data = $this->getInput();
-        
-        // Validar datos requeridos
-        $rules = [
-            'persona_id' => 'required|numeric',
-            'tipo_seguimiento_id' => 'required|numeric',
-            'fecha_seguimiento' => 'required',
-            'descripcion' => 'required'
+    public function create()
+    {
+        $personaId = $this->request->getGet('persona_id');
+        $personas = $this->personaModel->getPersonasActivas();
+
+        $data = [
+            'title'      => 'Nuevo Seguimiento',
+            'personas'   => $personas,
+            'seguimiento' => null,
+            'persona_id'  => $personaId,
         ];
-        
-        $errors = $this->validate($data, $rules);
-        
-        if (!empty($errors)) {
-            $_SESSION['errors'] = $errors;
-            $_SESSION['old_input'] = $data;
-            $this->redirect('/seguimientos/edit/' . $id);
-        }
-        
-        try {
-            $this->seguimientoModel->update($id, $data);
-            $this->redirectWith('/seguimientos', 'Seguimiento actualizado correctamente', 'success');
-        } catch (Exception $e) {
-            $this->redirectWith('/seguimientos/edit/' . $id, 'Error al actualizar seguimiento: ' . $e->getMessage(), 'error');
-        }
+
+        return view('seguimientos/create', $data);
     }
-    
+
     /**
-     * Eliminar seguimiento
+     * Guarda un nuevo seguimiento
      */
-    public function delete($id = null) {
-        if (!$id) {
-            $this->redirect('/seguimientos');
+    public function store()
+    {
+        $rules = [
+            'persona_id'        => 'required|is_natural_no_zero',
+            'tipo_seguimiento'  => 'required',
+            'fecha_seguimiento' => 'required|valid_date',
+        ];
+
+        if (!$this->validate($rules)) {
+            return redirect()->back()
+                ->withInput()
+                ->with('errors', $this->validator->getErrors());
         }
+
+        $data = $this->request->getPost();
         
-        try {
-            $this->seguimientoModel->delete($id);
-            $this->redirectWith('/seguimientos', 'Seguimiento eliminado correctamente', 'success');
-        } catch (Exception $e) {
-            $this->redirectWith('/seguimientos', 'Error al eliminar seguimiento: ' . $e->getMessage(), 'error');
+        // Agregar usuario responsable (seudónimo - ajustar según auth)
+        $data['usuario_seguimiento'] = 1;
+        
+        // Estado por defecto
+        if (!isset($data['estado'])) {
+            $data['estado'] = 'PENDIENTE';
         }
+
+        $this->seguimientoModel->insert($data);
+
+        $personaId = $data['persona_id'];
+
+        return redirect()->to('/seguimientos?persona_id=' . $personaId)
+            ->with('success', 'Seguimiento registrado exitosamente');
     }
-    
+
     /**
-     * Ver detalles de un seguimiento
+     * Muestra los detalles de un seguimiento
      */
-    public function show($id = null) {
-        if (!$id) {
-            $this->redirect('/seguimientos');
-        }
-        
+    public function show($id = null)
+    {
         $seguimiento = $this->seguimientoModel->find($id);
-        
+
         if (!$seguimiento) {
-            $this->redirectWith('/seguimientos', 'Seguimiento no encontrado', 'error');
+            return redirect()->to('/seguimientos')
+                ->with('error', 'Seguimiento no encontrado');
         }
-        
-        $this->view('seguimientos/view', [
+
+        $persona = $this->personaModel->find($seguimiento['persona_id']);
+
+        $data = [
+            'title'       => 'Ver Seguimiento',
             'seguimiento' => $seguimiento,
-            'message' => $this->getMessage()
-        ]);
+            'persona'     => $persona,
+        ];
+
+        return view('seguimientos/show', $data);
     }
-    
+
     /**
-     * Obtener seguimientos de una persona
+     * Muestra el formulario para editar un seguimiento
      */
-    public function porPersona($personaId = null) {
-        if (!$personaId) {
-            $this->json(['error' => 'ID de persona requerido'], 400);
+    public function edit($id = null)
+    {
+        $seguimiento = $this->seguimientoModel->find($id);
+
+        if (!$seguimiento) {
+            return redirect()->to('/seguimientos')
+                ->with('error', 'Seguimiento no encontrado');
         }
-        
-        $db = Database::getInstance()->getConnection();
-        $stmt = $db->prepare("
-            SELECT s.*, ts.nombre as tipo_nombre
-            FROM seguimientos s
-            JOIN tipos_seguimiento ts ON s.tipo_seguimiento_id = ts.id
-            WHERE s.persona_id = ?
-            ORDER BY s.fecha_seguimiento DESC
-        ");
-        $stmt->execute([$personaId]);
-        $seguimientos = $stmt->fetchAll();
-        
-        $this->json($seguimientos);
+
+        $personas = $this->personaModel->getPersonasActivas();
+
+        $data = [
+            'title'       => 'Editar Seguimiento',
+            'seguimiento' => $seguimiento,
+            'personas'    => $personas,
+        ];
+
+        return view('seguimientos/edit', $data);
     }
-    
+
     /**
-     * Obtener seguimientos activos/pendientes
+     * Actualiza un seguimiento
      */
-    public function activos() {
-        $seguimientos = $this->seguimientoModel->getActivos();
+    public function update($id = null)
+    {
+        $seguimiento = $this->seguimientoModel->find($id);
+
+        if (!$seguimiento) {
+            return redirect()->to('/seguimientos')
+                ->with('error', 'Seguimiento no encontrado');
+        }
+
+        $rules = [
+            'persona_id'        => 'required|is_natural_no_zero',
+            'tipo_seguimiento' => 'required',
+            'fecha_seguimiento' => 'required|valid_date',
+        ];
+
+        if (!$this->validate($rules)) {
+            return redirect()->back()
+                ->withInput()
+                ->with('errors', $this->validator->getErrors());
+        }
+
+        $data = $this->request->getPost();
+
+        $this->seguimientoModel->update($id, $data);
+
+        return redirect()->to('/seguimientos/show/' . $id)
+            ->with('success', 'Seguimiento actualizado exitosamente');
+    }
+
+    /**
+     * Elimina un seguimiento
+     */
+    public function delete($id = null)
+    {
+        $seguimiento = $this->seguimientoModel->find($id);
+
+        if (!$seguimiento) {
+            return redirect()->to('/seguimientos')
+                ->with('error', 'Seguimiento no encontrado');
+        }
+
+        $personaId = $seguimiento['persona_id'];
         
-        $this->view('seguimientos/activos', [
+        $this->seguimientoModel->delete($id);
+
+        return redirect()->to('/seguimientos?persona_id=' . $personaId)
+            ->with('success', 'Seguimiento eliminado exitosamente');
+    }
+
+    /**
+     * Lista seguimientos pendientes
+     */
+    public function pendientes()
+    {
+        $seguimientos = $this->seguimientoModel->getSeguimientosPendientes();
+
+        $data = [
+            'title'       => 'Seguimientos Pendientes',
             'seguimientos' => $seguimientos,
-            'message' => $this->getMessage()
-        ]);
+        ];
+
+        return view('seguimientos/pendientes', $data);
     }
-    
+
     /**
-     * Cambiar estado de un seguimiento
+     * Lista seguimientos próximos
      */
-    public function cambiarEstado($id = null) {
-        if (!$this->isPost() || !$id) {
-            $this->redirect('/seguimientos');
+    public function proximos()
+    {
+        $seguimientos = $this->seguimientoModel->getSeguimientosProximos();
+
+        $data = [
+            'title'       => 'Seguimientos Próximos',
+            'seguimientos' => $seguimientos,
+        ];
+
+        return view('seguimientos/proximos', $data);
+    }
+
+    /**
+     * Cambia el estado de un seguimiento
+     */
+    public function cambiarEstado($id = null)
+    {
+        $seguimiento = $this->seguimientoModel->find($id);
+
+        if (!$seguimiento) {
+            return redirect()->to('/seguimientos')
+                ->with('error', 'Seguimiento no encontrado');
         }
+
+        $estado = $this->request->getPost('estado');
         
-        $estado = $this->getInputValue('estado', '');
-        
-        try {
-            $this->seguimientoModel->update($id, ['estado_seguimiento' => $estado]);
-            $this->redirectWith('/seguimientos', 'Estado actualizado correctamente', 'success');
-        } catch (Exception $e) {
-            $this->redirectWith('/seguimientos', 'Error al actualizar estado: ' . $e->getMessage(), 'error');
-        }
+        $this->seguimientoModel->update($id, ['estado' => $estado]);
+
+        return redirect()->to('/seguimientos/show/' . $id)
+            ->with('success', 'Estado actualizado exitosamente');
     }
 }

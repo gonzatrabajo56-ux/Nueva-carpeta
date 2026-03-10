@@ -1,87 +1,89 @@
-<?php
-/**
- * Vista de Crear Evaluación
- * Sistema de Evaluación, Seguimiento y Caracterización
- */
-$personas = $personas ?? [];
-$tiposEvaluacion = $tiposEvaluacion ?? [];
-$data = $data ?? [];
-?>
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2"><i class="bi bi-clipboard-plus"></i> Nueva Evaluación</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="/evaluaciones" class="btn btn-sm btn-secondary">
+<?= $this->extend('layout/main') ?>
+
+<?= $this->section('content') ?>
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Nueva Evaluación</h2>
+        <a href="<?= base_url('/evaluaciones' . ($persona_id ? '?persona_id=' . $persona_id : '')) ?>" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Volver
         </a>
     </div>
-</div>
 
-<form method="POST" action="/evaluaciones/store">
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="bi bi-clipboard-data"></i> Datos de la Evaluación</h5>
+    <?php if (session()->getFlashdata('errors')): ?>
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                <?php foreach (session()->getFlashdata('errors') as $error): ?>
+                    <li><?= $error ?></li>
+                <?php endforeach; ?>
+            </ul>
         </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Persona *</label>
-                    <select name="persona_id" class="form-select" required>
-                        <option value="">Seleccionar persona</option>
-                        <?php foreach ($personas as $p): ?>
-                            <option value="<?= $p['id'] ?>" <?= ($data['persona_id'] ?? '') == $p['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($p['primer_nombre'] . ' ' . $p['primer_apellido'] . ' - ' . $p['cedula']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+    <?php endif; ?>
+
+    <form action="<?= base_url('/evaluaciones') ?>" method="post">
+        <?= csrf_field() ?>
+        
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Persona *</label>
+                        <select name="persona_id" class="form-select" required>
+                            <option value="">Seleccionar persona</option>
+                            <?php foreach ($personas as $p): ?>
+                                <option value="<?= $p['id'] ?>" <?= $persona_id == $p['id'] ? 'selected' : '' ?>>
+                                    <?= $p['cedula'] ?> - <?= $p['primer_nombre'] ?> <?= $p['primer_apellido'] ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tipo de Evaluación *</label>
+                        <select name="tipo_evaluacion" class="form-select" required>
+                            <option value="">Seleccionar</option>
+                            <option value="ACADEMICA">Académica</option>
+                            <option value="PSICOLOGICA">Psicológica</option>
+                            <option value="SOCIAL">Social</option>
+                            <option value="ECONOMICA">Económica</option>
+                            <option value="SEGUIMIENTO">Seguimiento</option>
+                            <option value="OTRA">Otra</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Tipo de Evaluación *</label>
-                    <select name="tipo_evaluacion_id" class="form-select" required>
-                        <option value="">Seleccionar tipo</option>
-                        <?php foreach ($tiposEvaluacion as $t): ?>
-                            <option value="<?= $t['id'] ?>" <?= ($data['tipo_evaluacion_id'] ?? '') == $t['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($t['nombre']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Título</label>
+                        <input type="text" name="titulo" class="form-control" placeholder="Título de la evaluación">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Fecha de Evaluación *</label>
+                        <input type="date" name="fecha_evaluacion" class="form-control" required value="<?= date('Y-m-d') ?>">
+                    </div>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Fecha de Evaluación *</label>
-                    <input type="date" name="fecha_evaluacion" class="form-control" value="<?= $data['fecha_evaluacion'] ?? date('Y-m-d') ?>" required>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Calificación</label>
+                        <input type="number" name="calificacion" class="form-control" step="0.01" min="0" max="20" placeholder="0-20">
+                    </div>
                 </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Puntaje</label>
-                    <input type="number" step="0.01" name="puntaje" class="form-control" value="<?= htmlspecialchars($data['puntaje'] ?? '') ?>">
-                </div>
-                <div class="col-md-4 mb-3">
+
+                <div class="mb-3">
                     <label class="form-label">Resultado</label>
-                    <input type="text" name="resultado" class="form-control" value="<?= htmlspecialchars($data['resultado'] ?? '') ?>">
+                    <textarea name="resultado" class="form-control" rows="4" placeholder="Resultado de la evaluación..."></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Observaciones</label>
+                    <textarea name="observaciones" class="form-control" rows="3" placeholder="Observaciones adicionales..."></textarea>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Evaluador</label>
-                    <input type="text" name="evaluador" class="form-control" value="<?= htmlspecialchars($data['evaluador'] ?? '') ?>">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Observaciones</label>
-                    <textarea name="observaciones" class="form-control" rows="3"><?= htmlspecialchars($data['observaciones'] ?? '') ?></textarea>
-                </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Guardar Evaluación
+                </button>
             </div>
         </div>
-    </div>
-
-    <div class="mb-4">
-        <button type="submit" class="btn btn-primary">
-            <i class="bi bi-save"></i> Guardar Evaluación
-        </button>
-        <a href="/evaluaciones" class="btn btn-secondary">Cancelar</a>
-    </div>
-</form>
-</main>
+    </form>
 </div>
-</div>
-</body>
-</html>
+<?= $this->endSection() ?>

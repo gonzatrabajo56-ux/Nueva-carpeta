@@ -1,89 +1,107 @@
-<?php
-/**
- * Vista de Crear Seguimiento
- * Sistema de Evaluación, Seguimiento y Caracterización
- */
-$personas = $personas ?? [];
-$tiposSeguimiento = $tiposSeguimiento ?? [];
-$data = $data ?? [];
-?>
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2"><i class="bi bi-journal-plus"></i> Nuevo Seguimiento</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="/seguimientos" class="btn btn-sm btn-secondary">
+<?= $this->extend('layout/main') ?>
+
+<?= $this->section('content') ?>
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Nuevo Seguimiento</h2>
+        <a href="<?= base_url('/seguimientos' . ($persona_id ? '?persona_id=' . $persona_id : '')) ?>" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Volver
         </a>
     </div>
-</div>
 
-<form method="POST" action="/seguimientos/store">
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="bi bi-journal-text"></i> Datos del Seguimiento</h5>
+    <?php if (session()->getFlashdata('errors')): ?>
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                <?php foreach (session()->getFlashdata('errors') as $error): ?>
+                    <li><?= $error ?></li>
+                <?php endforeach; ?>
+            </ul>
         </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Persona *</label>
-                    <select name="persona_id" class="form-select" required>
-                        <option value="">Seleccionar persona</option>
-                        <?php foreach ($personas as $p): ?>
-                            <option value="<?= $p['id'] ?>" <?= ($data['persona_id'] ?? '') == $p['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($p['primer_nombre'] . ' ' . $p['primer_apellido'] . ' - ' . $p['cedula']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Tipo de Seguimiento *</label>
-                    <select name="tipo_seguimiento_id" class="form-select" required>
-                        <option value="">Seleccionar tipo</option>
-                        <?php foreach ($tiposSeguimiento as $t): ?>
-                            <option value="<?= $t['id'] ?>" <?= ($data['tipo_seguimiento_id'] ?? '') == $t['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($t['nombre']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Fecha de Seguimiento *</label>
-                    <input type="date" name="fecha_seguimiento" class="form-control" value="<?= $data['fecha_seguimiento'] ?? date('Y-m-d') ?>" required>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Próxima Fecha</label>
-                    <input type="date" name="proxima_fecha" class="form-control" value="<?= htmlspecialchars($data['proxima_fecha'] ?? '') ?>">
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Responsable</label>
-                    <input type="text" name="responsable" class="form-control" value="<?= htmlspecialchars($data['responsable'] ?? '') ?>">
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-12 mb-3">
-                    <label class="form-label">Descripción *</label>
-                    <textarea name="descripcion" class="form-control" rows="4" required><?= htmlspecialchars($data['descripcion'] ?? '') ?></textarea>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-12 mb-3">
-                    <label class="form-label">Resultado</label>
-                    <textarea name="resultado" class="form-control" rows="3"><?= htmlspecialchars($data['resultado'] ?? '') ?></textarea>
-                </div>
-            </div>
-        </div>
-    </div>
+    <?php endif; ?>
 
-    <div class="mb-4">
-        <button type="submit" class="btn btn-primary">
-            <i class="bi bi-save"></i> Guardar Seguimiento
-        </button>
-        <a href="/seguimientos" class="btn btn-secondary">Cancelar</a>
-    </div>
-</form>
-</main>
+    <form action="<?= base_url('/seguimientos') ?>" method="post">
+        <?= csrf_field() ?>
+        
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Persona *</label>
+                        <select name="persona_id" class="form-select" required>
+                            <option value="">Seleccionar persona</option>
+                            <?php foreach ($personas as $p): ?>
+                                <option value="<?= $p['id'] ?>" <?= $persona_id == $p['id'] ? 'selected' : '' ?>>
+                                    <?= $p['cedula'] ?> - <?= $p['primer_nombre'] ?> <?= $p['primer_apellido'] ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tipo de Seguimiento *</label>
+                        <select name="tipo_seguimiento" class="form-select" required>
+                            <option value="">Seleccionar</option>
+                            <option value="TELEFONICO">Telefónico</option>
+                            <option value="PRESENCIAL">Presencial</option>
+                            <option value="ACADEMICO">Académico</option>
+                            <option value="SALUD">Salud</option>
+                            <option value="SOCIAL">Social</option>
+                            <option value="LABORAL">Laboral</option>
+                            <option value="OTRO">Otro</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Fecha de Seguimiento *</label>
+                        <input type="date" name="fecha_seguimiento" class="form-control" required value="<?= date('Y-m-d') ?>">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Prioridad</label>
+                        <select name="prioridad" class="form-select">
+                            <option value="BAJA">Baja</option>
+                            <option value="MEDIA" selected>Media</option>
+                            <option value="ALTA">Alta</option>
+                            <option value="URGENTE">Urgente</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Estado</label>
+                        <select name="estado" class="form-select">
+                            <option value="PENDIENTE">Pendiente</option>
+                            <option value="EN_PROCESO">En Proceso</option>
+                            <option value="COMPLETADO">Completado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Descripción</label>
+                    <textarea name="descripcion" class="form-control" rows="3" placeholder="Descripción del seguimiento..."></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Acciones Realizadas</label>
+                    <textarea name="acciones" class="form-control" rows="3" placeholder="Acciones tomadas..."></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Resultado</label>
+                        <textarea name="resultado" class="form-control" rows="2" placeholder="Resultado del seguimiento..."></textarea>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Próxima Fecha</label>
+                        <input type="date" name="proxima_fecha" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Guardar Seguimiento
+                </button>
+            </div>
+        </div>
+    </form>
 </div>
-</div>
-</body>
-</html>
+<?= $this->endSection() ?>

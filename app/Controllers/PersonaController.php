@@ -1,275 +1,254 @@
 <?php
-/**
- * Controlador de Persona
- * Sistema de Evaluación, Seguimiento y Caracterización
- */
 
-require_once __DIR__ . '/Controller.php';
-require_once __DIR__ . '/../Models/Persona.php';
+namespace App\Controllers;
 
-class PersonaController extends Controller {
-    private $personaModel;
-    
-    /**
-     * Mapeo de nombres de campos del formulario a la base de datos
-     */
-    private $fieldMapping = [
-        'nacionalidad' => 'nacionalidad_id',
-        'sexo' => 'sexo_id',
-        'carrera' => 'carrera_id',
-        'sede' => 'sede_id',
-        'nombre_universidad' => 'universidad_id',
-        'estado_residencia' => 'estado_id',
-        'municipio' => 'municipio_id',
-        'parroquia' => 'parroquia_id',
-        'estado_civil' => 'estado_civil_id',
-        'tipo_discapacidad' => 'tipo_discapacidad_id',
-        'condicion_medica' => 'condicion_medica_id',
-        'tipo_sangre' => 'tipo_sangre_id',
-        'tipo_empleo' => 'tipo_empleo_id',
-        'medio_transporte' => 'medio_transporte_id'
-    ];
-    
-    public function __construct() {
-        parent::__construct();
-        $this->personaModel = new Persona();
+use App\Models\PersonaModel;
+use App\Models\EvaluacionModel;
+use App\Models\SeguimientoModel;
+
+class PersonaController extends BaseController
+{
+    protected $personaModel;
+    protected $evaluacionModel;
+    protected $seguimientoModel;
+
+    public function __construct()
+    {
+        $this->personaModel = new PersonaModel();
+        $this->evaluacionModel = new EvaluacionModel();
+        $this->seguimientoModel = new SeguimientoModel();
     }
-    
+
     /**
-     * Mapear nombres de campos del formulario a la base de datos
+     * Lista todas las personas
      */
-    private function mapFields($data) {
-        foreach ($this->fieldMapping as $oldName => $newName) {
-            if (isset($data[$oldName]) && $data[$oldName] !== '') {
-                $data[$newName] = $data[$oldName];
-                unset($data[$oldName]);
-            }
-        }
-        return $data;
-    }
-    
-    /**
-     * Index - Listar todas las personas
-     */
-    public function index() {
-        $page = $this->getInputValue('page', 1);
-        $search = $this->getInputValue('search', '');
+    public function index()
+    {
+        $busqueda = $this->request->getGet('q');
         
-        if (!empty($search)) {
-            $personas = $this->personaModel->search($search);
+        if ($busqueda) {
+            $personas = $this->personaModel
+                ->groupStart()
+                ->like('primer_nombre', $busqueda)
+                ->orLike('primer_apellido', $busqueda)
+                ->orLike('cedula', $busqueda)
+                ->orLike('correo_electronico', $busqueda)
+                ->groupEnd()
+                ->where('estado_registro', 'ACTIVO')
+                ->orderBy('primer_apellido', 'ASC')
+                ->paginate(15);
         } else {
-            $personas = $this->personaModel->paginate($page, Config::ITEMS_PER_PAGE);
+            $personas = $this->personaModel
+                ->where('estado_registro', 'ACTIVO')
+                ->orderBy('primer_apellido', 'ASC')
+                ->paginate(15);
         }
-        
-        $total = $this->personaModel->count();
-        $totalPages = ceil($total / Config::ITEMS_PER_PAGE);
-        
-        $this->view('personas/index', [
-            'personas' => $personas,
-            'page' => $page,
-            'totalPages' => $totalPages,
-            'search' => $search,
-            'message' => $this->getMessage()
-        ]);
-    }
-    
-    /**
-     * Mostrar formulario de creación
-     */
-    public function create() {
-        $this->view('personas/create', [
-            'message' => $this->getMessage()
-        ]);
-    }
-    
-    /**
-     * Guardar nueva persona
-     */
-    public function store() {
-        if (!$this->isPost()) {
-            $this->redirect('/personas/create');
-        }
-        
-        $data = $this->getInput();
-        
-        // Mapear nombres de campos del formulario a la base de datos
-        $data = $this->mapFields($data);
-        
-        // Validar datos requeridos
-        $rules = [
-            'cedula' => 'required|min:5',
-            'primer_nombre' => 'required|min:2',
-            'primer_apellido' => 'required|min:2',
-            'correo_electronico' => 'email'
+
+        $data = [
+            'title'     => 'Lista de Personas',
+            'personas'  => $personas,
+            'pager'     => $this->personaModel->pager,
+            'busqueda'  => $busqueda,
         ];
-        
-        $errors = $this->validate($data, $rules);
-        
-        if (!empty($errors)) {
-            $this->view('personas/create', [
-                'errors' => $errors,
-                'data' => $data
-            ]);
-            return;
+
+        return view('personas/index', $data);
+    }
+
+    /**
+     * Muestra el formulario para crear una nueva persona
+     */
+    public function create()
+    {
+        $data = [
+            'title'    => 'Nueva Persona',
+            'persona' => null,
+        ];
+
+        return view('personas/create', $data);
+    }
+
+    /**
+     * Guarda una nueva persona
+     */
+    public function store()
+    {
+        $rules = [
+            'cedula'            => 'required|is_unique[personas.cedula]',
+            'primer_nombre'     => 'required|min_length[2]|max_length[50]',
+            'primer_apellido'   => 'required|min_length[2]|max_length[50]',
+            'correo_electronico' => 'valid_email',
+        ];
+
+        if (!$this->validate($rules)) {
+            return redirect()->back()
+                ->withInput()
+                ->with('errors', $this->validator->getErrors());
         }
+
+        $data = $this->request->getPost();
         
-        // Calcular edad si hay fecha de nacimiento
+        // Calcular edad si se proporcionó fecha de nacimiento
         if (!empty($data['fecha_nacimiento'])) {
-            $data['edad'] = Persona::calcularEdad($data['fecha_nacimiento']);
+            $data['edad'] = $this->personaModel->calcularEdad($data['fecha_nacimiento']);
         }
         
-        // Valores por defecto
-        $data['estado_registro_id'] = $data['estado_registro_id'] ?? 1;
-        
-        try {
-            $id = $this->personaModel->create($data);
-            $this->redirectWith('/personas', 'Persona registrada exitosamente', 'success');
-        } catch (Exception $e) {
-            $this->view('personas/create', [
-                'errors' => ['general' => 'Error al guardar: ' . $e->getMessage()],
-                'data' => $data
-            ]);
-        }
+        // Agregar fecha de registro
+        $data['fecha_registro'] = date('Y-m-d H:i:s');
+        $data['estado_registro'] = 'ACTIVO';
+
+        $this->personaModel->insert($data);
+
+        return redirect()->to('/personas')
+            ->with('success', 'Persona registrada exitosamente');
     }
-    
+
     /**
-     * Mostrar detalles de una persona
+     * Muestra los detalles de una persona
      */
-    public function show($id) {
+    public function show($id = null)
+    {
         $persona = $this->personaModel->find($id);
-        
+
         if (!$persona) {
-            $this->error('Persona no encontrada');
+            return redirect()->to('/personas')
+                ->with('error', 'Persona no encontrada');
         }
-        
-        $this->view('personas/show', [
-            'persona' => $persona
-        ]);
+
+        // Obtener evaluaciones y seguimientos
+        $evaluaciones = $this->evaluacionModel->getEvaluacionesPorPersona($id);
+        $seguimientos = $this->seguimientoModel->getSeguimientosPorPersona($id);
+
+        $data = [
+            'title'       => 'Ver Persona',
+            'persona'    => $persona,
+            'evaluaciones'  => $evaluaciones,
+            'seguimientos'  => $seguimientos,
+        ];
+
+        return view('personas/show', $data);
     }
-    
+
     /**
-     * Mostrar formulario de edición
+     * Muestra el formulario para editar una persona
      */
-    public function edit($id) {
+    public function edit($id = null)
+    {
         $persona = $this->personaModel->find($id);
-        
+
         if (!$persona) {
-            $this->error('Persona no encontrada');
+            return redirect()->to('/personas')
+                ->with('error', 'Persona no encontrada');
         }
-        
-        $this->view('personas/edit', [
+
+        $data = [
+            'title'    => 'Editar Persona',
             'persona' => $persona,
-            'message' => $this->getMessage()
-        ]);
-    }
-    
-    /**
-     * Actualizar persona
-     */
-    public function update($id) {
-        if (!$this->isPost()) {
-            $this->redirect("/personas/edit/{$id}");
-        }
-        
-        $data = $this->getInput();
-        
-        // Mapear nombres de campos del formulario a la base de datos
-        $data = $this->mapFields($data);
-        
-        // Validar datos requeridos
-        $rules = [
-            'cedula' => 'required|min:5',
-            'primer_nombre' => 'required|min:2',
-            'primer_apellido' => 'required|min:2',
-            'correo_electronico' => 'email'
         ];
-        
-        $errors = $this->validate($data, $rules);
-        
-        if (!empty($errors)) {
-            $this->view('personas/edit', [
-                'errors' => $errors,
-                'persona' => array_merge($this->personaModel->find($id), $data)
-            ]);
-            return;
+
+        return view('personas/edit', $data);
+    }
+
+    /**
+     * Actualiza una persona
+     */
+    public function update($id = null)
+    {
+        $persona = $this->personaModel->find($id);
+
+        if (!$persona) {
+            return redirect()->to('/personas')
+                ->with('error', 'Persona no encontrada');
         }
-        
-        // Calcular edad si hay fecha de nacimiento
+
+        // Verificar si la cédula cambió
+        $cedulaActual = $this->request->getPost('cedula');
+        $rules = [
+            'primer_nombre'     => 'required|min_length[2]|max_length[50]',
+            'primer_apellido'  => 'required|min_length[2]|max_length[50]',
+            'correo_electronico' => 'valid_email',
+        ];
+
+        if ($cedulaActual !== $persona['cedula']) {
+            $rules['cedula'] = 'required|is_unique[personas.cedula]';
+        }
+
+        if (!$this->validate($rules)) {
+            return redirect()->back()
+                ->withInput()
+                ->with('errors', $this->validator->getErrors());
+        }
+
+        $data = $this->request->getPost();
+
+        // Recalcular edad si cambió la fecha de nacimiento
         if (!empty($data['fecha_nacimiento'])) {
-            $data['edad'] = Persona::calcularEdad($data['fecha_nacimiento']);
+            $data['edad'] = $this->personaModel->calcularEdad($data['fecha_nacimiento']);
         }
-        
-        try {
-            $this->personaModel->update($id, $data);
-            $this->redirectWith("/personas/edit/{$id}", 'Persona actualizada exitosamente', 'success');
-        } catch (Exception $e) {
-            $this->view('personas/edit', [
-                'errors' => ['general' => 'Error al actualizar: ' . $e->getMessage()],
-                'persona' => array_merge($this->personaModel->find($id), $data)
+
+        $this->personaModel->update($id, $data);
+
+        return redirect()->to('/personas/show/' . $id)
+            ->with('success', 'Persona actualizada exitosamente');
+    }
+
+    /**
+     * Elimina (desactiva) una persona
+     */
+    public function delete($id = null)
+    {
+        $persona = $this->personaModel->find($id);
+
+        if (!$persona) {
+            return redirect()->to('/personas')
+                ->with('error', 'Persona no encontrada');
+        }
+
+        // Soft delete - cambiar estado
+        $this->personaModel->update($id, ['estado_registro' => 'INACTIVO']);
+
+        return redirect()->to('/personas')
+            ->with('success', 'Persona eliminada exitosamente');
+    }
+
+    /**
+     * Busca personas por cédula (API)
+     */
+    public function buscar()
+    {
+        $cedula = $this->request->getGet('cedula');
+
+        if (!$cedula) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Cédula no proporcionada'
             ]);
         }
-    }
-    
-    /**
-     * Eliminar persona
-     */
-    public function delete($id) {
-        try {
-            $this->personaModel->delete($id);
-            $this->redirectWith('/personas', 'Persona eliminada exitosamente', 'success');
-        } catch (Exception $e) {
-            $this->redirectWith('/personas', 'Error al eliminar: ' . $e->getMessage(), 'error');
-        }
-    }
-    
-    /**
-     * Estadísticas y dashboard
-     */
-    public function stats() {
-        $stats = $this->personaModel->getEstadisticas();
-        $promedioEdad = $this->personaModel->getPromedioEdad();
-        
-        $this->view('personas/stats', [
-            'stats' => $stats,
-            'promedioEdad' => $promedioEdad
-        ]);
-    }
-    
-    /**
-     * Exportar datos
-     */
-    public function export() {
-        $personas = $this->personaModel->all();
-        
-        // Generar CSV
-        header('Content-Type: text/csv');
-        header('Content-Disposition: attachment; filename="personas_export.csv"');
-        
-        $output = fopen('php://output', 'w');
-        
-        // Encabezados
-        fputcsv($output, [
-            'ID', 'Cédula', 'Nombres', 'Apellidos', 'Sexo', 
-            'Edad', 'Correo', 'Teléfono', 'Carrera', 'Universidad'
-        ]);
-        
-        // Datos
-        foreach ($personas as $p) {
-            fputcsv($output, [
-                $p['id'],
-                $p['cedula'],
-                $p['primer_nombre'] . ' ' . $p['segundo_nombre'],
-                $p['primer_apellido'] . ' ' . $p['segundo_apellido'],
-                $p['sexo'],
-                $p['edad'],
-                $p['correo_electronico'],
-                $p['telefono_1'],
-                $p['carrera'],
-                $p['nombre_universidad']
+
+        $persona = $this->personaModel->buscarPorCedula($cedula);
+
+        if ($persona) {
+            return $this->response->setJSON([
+                'success' => true,
+                'data'    => $persona
             ]);
         }
+
+        return $this->response->setJSON([
+            'success' => false,
+            'message' => 'No se encontró ninguna persona con esa cédula'
+        ]);
+    }
+
+    /**
+     * Estadísticas del módulo de personas
+     */
+    public function estadisticas()
+    {
+        $data = $this->personaModel->getEstadisticas();
         
-        fclose($output);
-        exit;
+        return $this->response->setJSON([
+            'success' => true,
+            'data'    => $data
+        ]);
     }
 }
