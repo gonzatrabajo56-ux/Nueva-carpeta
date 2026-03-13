@@ -247,4 +247,32 @@ class PersonaModel extends Model
             $this->update($personaId, ['foto' => null]);
         }
     }
+
+    /**
+     * Obtiene estadísticas de tipo de sangre
+     */
+    public function getEstadisticasTipoSangre($departamentoId = null)
+    {
+        if ($departamentoId) {
+            $personas = $this->where('departamento_id', $departamentoId)
+                ->where('estado_registro', 'ACTIVO')
+                ->findAll();
+        } else {
+            $personas = $this->where('estado_registro', 'ACTIVO')->findAll();
+        }
+
+        $tiposSangre = [];
+        foreach ($personas as $p) {
+            $tipo = $p['tipo_sangre'] ?? 'No definido';
+            if (!isset($tiposSangre[$tipo])) {
+                $tiposSangre[$tipo] = 0;
+            }
+            $tiposSangre[$tipo]++;
+        }
+
+        // Ordenar por cantidad
+        arsort($tiposSangre);
+
+        return $tiposSangre;
+    }
 }

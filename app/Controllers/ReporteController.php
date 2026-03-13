@@ -50,25 +50,33 @@ class ReporteController extends BaseController
                 $personas = $this->personaModel->where('departamento_id', $departamentoId)
                     ->where('estado_registro', 'ACTIVO')
                     ->findAll();
+                $departamento = $this->departamentoModel->find($departamentoId);
+                $filtros['departamento'] = $departamento['nombre'] ?? 'Todos';
             } else {
                 $personas = $this->personaModel->where('estado_registro', 'ACTIVO')->findAll();
+                $filtros['departamento'] = 'Todos';
             }
         } else {
             $personas = $this->personaModel->where('departamento_id', $departamentoSession)
                 ->where('estado_registro', 'ACTIVO')
                 ->findAll();
+            $departamento = $this->departamentoModel->find($departamentoSession);
+            $filtros['departamento'] = $departamento['nombre'] ?? 'Mi Departamento';
         }
+
+        $filtros['total'] = count($personas);
 
         if ($formato === 'excel') {
             return $this->exportExcelPersonas($personas);
         } elseif ($formato === 'pdf') {
-            return $this->exportPdfPersonas($personas);
+            return $this->exportPdfPersonas($personas, $filtros);
         }
 
         $data = [
             'title' => 'Reporte de Personas',
             'personas' => $personas,
             'departamentos' => $this->departamentoModel->findAll(),
+            'filtros' => $filtros,
         ];
 
         return view('reportes/personas', $data);
@@ -98,11 +106,29 @@ class ReporteController extends BaseController
         }
 
         // Filtrar por departamento y fecha
+        $filtros = [];
         if ($departamentoId || $mes || $año) {
             $personaIds = [];
             if ($departamentoId) {
                 $personasDept = $this->personaModel->where('departamento_id', $departamentoId)->findAll();
                 $personaIds = array_column($personasDept, 'id');
+                $departamento = $this->departamentoModel->find($departamentoId);
+                $filtros['departamento'] = $departamento['nombre'] ?? 'Todos';
+            } else {
+                $filtros['departamento'] = 'Todos';
+            }
+            
+            if ($mes) {
+                $meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                $filtros['mes'] = $meses[(int)$mes];
+            } else {
+                $filtros['mes'] = 'Todos';
+            }
+            
+            if ($año) {
+                $filtros['año'] = $año;
+            } else {
+                $filtros['año'] = 'Todos';
             }
             
             $evaluaciones = array_filter($evaluaciones, function($eval) use ($personaIds, $mes, $año, $departamentoId) {
@@ -117,18 +143,25 @@ class ReporteController extends BaseController
                 }
                 return true;
             });
+        } else {
+            $filtros['departamento'] = 'Todos';
+            $filtros['mes'] = 'Todos';
+            $filtros['año'] = 'Todos';
         }
+
+        $filtros['total'] = count($evaluaciones);
 
         if ($formato === 'excel') {
             return $this->exportExcelEvaluaciones($evaluaciones);
         } elseif ($formato === 'pdf') {
-            return $this->exportPdfEvaluaciones($evaluaciones);
+            return $this->exportPdfEvaluaciones($evaluaciones, $filtros);
         }
 
         $data = [
             'title' => 'Reporte de Evaluaciones',
             'evaluaciones' => $evaluaciones,
             'departamentos' => $this->departamentoModel->findAll(),
+            'filtros' => $filtros,
         ];
 
         return view('reportes/evaluaciones', $data);
@@ -155,9 +188,20 @@ class ReporteController extends BaseController
         }
 
         // Filtrar
+        $filtros = [];
         if ($departamentoId || $estado) {
             $personasDept = $this->personaModel->where('departamento_id', $departamentoId)->findAll();
             $personaIdsDept = array_column($personasDept, 'id');
+            
+            if ($departamentoId) {
+                $departamento = $this->departamentoModel->find($departamentoId);
+                $filtros['departamento'] = $departamento['nombre'] ?? 'Todos';
+            } else {
+                $filtros['departamento'] = 'Todos';
+            }
+            
+            $estados = ['' => 'Todos', 'PENDIENTE' => 'Pendiente', 'EN_PROCESO' => 'En Proceso', 'COMPLETADO' => 'Completado'];
+            $filtros['estado'] = $estados[$estado] ?? 'Todos';
             
             $seguimientos = array_filter($seguimientos, function($seg) use ($personaIdsDept, $estado, $departamentoId) {
                 if ($departamentoId && !in_array($seg['persona_id'], $personaIdsDept)) {
@@ -168,18 +212,24 @@ class ReporteController extends BaseController
                 }
                 return true;
             });
+        } else {
+            $filtros['departamento'] = 'Todos';
+            $filtros['estado'] = 'Todos';
         }
+
+        $filtros['total'] = count($seguimientos);
 
         if ($formato === 'excel') {
             return $this->exportExcelSeguimientos($seguimientos);
         } elseif ($formato === 'pdf') {
-            return $this->exportPdfSeguimientos($seguimientos);
+            return $this->exportPdfSeguimientos($seguimientos, $filtros);
         }
 
         $data = [
             'title' => 'Reporte de Seguimientos',
             'seguimientos' => $seguimientos,
             'departamentos' => $this->departamentoModel->findAll(),
+            'filtros' => $filtros,
         ];
 
         return view('reportes/seguimientos', $data);
@@ -352,12 +402,13 @@ class ReporteController extends BaseController
     /**
      * Exportar a PDF (HTML para imprimir)
      */
-    private function exportPdfPersonas($personas)
+    private function exportPdfPersonas($personas, $filtros = [])
     {
         $data = [
             'title' => 'Reporte de Personas',
             'personas' => $personas,
             'fecha' => date('d/m/Y H:i'),
+            'filtros' => $filtros,
         ];
 
         // Cargar vista como string
@@ -367,12 +418,13 @@ class ReporteController extends BaseController
             ->setBody($html);
     }
 
-    private function exportPdfEvaluaciones($evaluaciones)
+    private function exportPdfEvaluaciones($evaluaciones, $filtros = [])
     {
         $data = [
             'title' => 'Reporte de Evaluaciones',
             'evaluaciones' => $evaluaciones,
             'fecha' => date('d/m/Y H:i'),
+            'filtros' => $filtros,
         ];
 
         $html = view('reportes/pdf/evaluaciones', $data);
@@ -381,17 +433,83 @@ class ReporteController extends BaseController
             ->setBody($html);
     }
 
-    private function exportPdfSeguimientos($seguimientos)
+    private function exportPdfSeguimientos($seguimientos, $filtros = [])
     {
         $data = [
             'title' => 'Reporte de Seguimientos',
             'seguimientos' => $seguimientos,
             'fecha' => date('d/m/Y H:i'),
+            'filtros' => $filtros,
         ];
 
         $html = view('reportes/pdf/seguimientos', $data);
         
         return $this->response->setContentType('text/html')
             ->setBody($html);
+    }
+
+    /**
+     * Reporte de estadísticas (gráficos)
+     */
+    public function estadisticas()
+    {
+        $departamentoId = $this->request->getGet('departamento');
+        $rol = session()->get('rol');
+        $departamentoSession = session()->get('departamento_id');
+
+        // Obtener personas según rol
+        if ($rol === 'ADMIN' || $rol === 'EVALUADOR') {
+            if ($departamentoId) {
+                $personas = $this->personaModel->where('departamento_id', $departamentoId)
+                    ->where('estado_registro', 'ACTIVO')
+                    ->findAll();
+                $departamento = $this->departamentoModel->find($departamentoId);
+                $filtros['departamento'] = $departamento['nombre'] ?? 'Todos';
+            } else {
+                $personas = $this->personaModel->where('estado_registro', 'ACTIVO')->findAll();
+                $filtros['departamento'] = 'Todos los departamentos';
+            }
+        } else {
+            $personas = $this->personaModel->where('departamento_id', $departamentoSession)
+                ->where('estado_registro', 'ACTIVO')
+                ->findAll();
+            $departamento = $this->departamentoModel->find($departamentoSession);
+            $filtros['departamento'] = $departamento['nombre'] ?? 'Mi Departamento';
+        }
+
+        // Estadísticas de tipo de sangre
+        $tiposSangre = [];
+        foreach ($personas as $p) {
+            $tipo = $p['tipo_sangre'] ?? 'No definido';
+            if (!isset($tiposSangre[$tipo])) {
+                $tiposSangre[$tipo] = 0;
+            }
+            $tiposSangre[$tipo]++;
+        }
+
+        // Ordenar por cantidad
+        arsort($tiposSangre);
+
+        // Colores para el gráfico
+        $colores = [
+            'A+' => '#e74c3c', 'A-' => '#c0392b',
+            'B+' => '#3498db', 'B-' => '#2980b9',
+            'AB+' => '#9b59b6', 'AB-' => '#8e44ad',
+            'O+' => '#2ecc71', 'O-' => '#27ae60',
+            'No definido' => '#95a5a6'
+        ];
+
+        $data = [
+            'title' => 'Estadísticas del Sistema',
+            'personas' => $personas,
+            'departamentos' => $this->departamentoModel->findAll(),
+            'tiposSangre' => $tiposSangre,
+            'colores' => $colores,
+            'filtros' => $filtros,
+            'totalPersonas' => count($personas),
+            'selectedDepartamento' => $departamentoId,
+        ];
+
+        return view('reportes/estadisticas', $data);
     }
 }

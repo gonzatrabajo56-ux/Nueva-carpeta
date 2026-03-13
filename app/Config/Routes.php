@@ -76,3 +76,4 @@ $routes->get('/reportes/evaluaciones', 'ReporteController::evaluaciones');
 $routes->get('/reportes/evaluaciones/(:any)', 'ReporteController::evaluaciones/$1');
 $routes->get('/reportes/seguimientos', 'ReporteController::seguimientos');
 $routes->get('/reportes/seguimientos/(:any)', 'ReporteController::seguimientos/$1');
+$routes->get('/reportes/estadisticas', 'ReporteController::estadisticas');

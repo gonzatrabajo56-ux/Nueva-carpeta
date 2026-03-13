@@ -147,6 +147,46 @@
         </div>
     </div>
 
+    <!-- Estadísticas y Gráficos -->
+    <div class="row mt-2">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Estadísticas y Gráficos</h5>
+                </div>
+                <div class="card-body">
+                    <p>Visualice gráficos y estadísticas del sistema, incluyendo la distribución por tipo de sangre.</p>
+                    
+                    <form action="<?= base_url('/reportes/estadisticas') ?>" method="get">
+                        <div class="row align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label">Departamento</label>
+                                <select name="departamento" class="form-select">
+                                    <option value="">Todos los departamentos</option>
+                                    <?php foreach ($departamentos as $dept): ?>
+                                        <option value="<?= $dept['id'] ?>"><?= $dept['nombre'] ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-info w-100">
+                                    <i class="bi bi-graph-up"></i> Ver Estadísticas
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> 
+                            Incluyen gráficos de tipo de sangre, distribución por departamento y más.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="mt-3">
         <a href="<?= base_url('/dashboard') ?>" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Volver al Dashboard

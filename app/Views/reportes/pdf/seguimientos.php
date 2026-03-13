@@ -17,7 +17,7 @@
         
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            font-size: 9px;
+            font-size: 10px;
             color: #333;
             background: #fff;
         }
@@ -30,7 +30,7 @@
         }
         
         .header h1 {
-            font-size: 24px;
+            font-size: 22px;
             color: #2c3e50;
             margin-bottom: 5px;
             text-transform: uppercase;
@@ -58,13 +58,13 @@
             align-items: center;
             margin-bottom: 15px;
             padding: 10px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
             color: white;
             border-radius: 8px;
         }
         
         .company-info h2 {
-            font-size: 18px;
+            font-size: 16px;
         }
         
         .company-info p {
@@ -115,7 +115,7 @@
         }
         
         thead th { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
             color: white;
             padding: 10px 6px;
             text-align: center;
@@ -134,31 +134,42 @@
             border-top-right-radius: 8px;
         }
         
-        tbody tr {
-            transition: background 0.2s;
-        }
-        
         tbody tr:nth-child(even) { 
             background-color: #f8f9fa; 
-        }
-        
-        tbody tr:hover {
-            background-color: #e8f4f8;
         }
         
         tbody td { 
             padding: 8px 6px;
             text-align: center;
             border: 1px solid #ecf0f1;
-            font-size: 8px;
+            font-size: 9px;
         }
         
-        tbody tr:last-child td:first-child {
-            border-bottom-left-radius: 8px;
+        .estado-pendiente {
+            color: #e67e22;
+            font-weight: bold;
         }
         
-        tbody tr:last-child td:last-child {
-            border-bottom-right-radius: 8px;
+        .estado-proceso {
+            color: #3498db;
+            font-weight: bold;
+        }
+        
+        .estado-completado {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .prioridad-alta {
+            color: #e74c3c;
+        }
+        
+        .prioridad-media {
+            color: #f39c12;
+        }
+        
+        .prioridad-baja {
+            color: #27ae60;
         }
         
         .total { 
@@ -167,7 +178,7 @@
             font-weight: bold; 
             font-size: 12px;
             padding: 10px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
             color: white;
             border-radius: 8px;
             display: inline-block;
@@ -204,7 +215,7 @@
 </head>
 <body>
     <div class="no-print" style="margin-bottom: 20px; text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-        <button onclick="window.print()" style="padding: 12px 25px; cursor: pointer; background: #667eea; color: white; border: none; border-radius: 5px; font-size: 14px; margin-right: 10px;">
+        <button onclick="window.print()" style="padding: 12px 25px; cursor: pointer; background: #27ae60; color: white; border: none; border-radius: 5px; font-size: 14px; margin-right: 10px;">
             <i class="bi bi-printer"></i> Imprimir / Guardar PDF
         </button>
         <button onclick="window.close()" style="padding: 12px 25px; cursor: pointer; background: #95a5a6; color: white; border: none; border-radius: 5px; font-size: 14px;">
@@ -215,7 +226,7 @@
     <div class="company-info">
         <div>
             <h2> Sistema de Caracterización AuryS</h2>
-            <p>Reporte de Personas Registradas</p>
+            <p>Reporte de Seguimientos Realizados</p>
         </div>
         <div style="text-align: right;">
             <p><strong>Fecha:</strong> <?= date('d/m/Y') ?></p>
@@ -225,7 +236,7 @@
 
     <div class="header">
         <h1><?= $title ?></h1>
-        <p class="subtitle">Reporte completo de caracterización de personas</p>
+        <p class="subtitle">Seguimientos y acompañamiento</p>
         <span class="fecha">Generado: <?= $fecha ?></span>
     </div>
 
@@ -237,8 +248,12 @@
             <span class="filtro-valor"><?= $filtros['departamento'] ?? 'Todos' ?></span>
         </div>
         <div class="filtro-item">
+            <span class="filtro-label">Estado:</span>
+            <span class="filtro-valor"><?= $filtros['estado'] ?? 'Todos' ?></span>
+        </div>
+        <div class="filtro-item">
             <span class="filtro-label">Total Registros:</span>
-            <span class="filtro-valor"><?= $filtros['total'] ?? count($personas) ?></span>
+            <span class="filtro-valor"><?= $filtros['total'] ?? count($seguimientos) ?></span>
         </div>
     </div>
     <?php endif; ?>
@@ -247,56 +262,47 @@
         <thead>
             <tr>
                 <th>N°</th>
-                <th>Cédula</th>
-                <th>Primer Nombre</th>
-                <th>Segundo Nombre</th>
-                <th>Primer Apellido</th>
-                <th>Segundo Apellido</th>
-                <th>Sexo</th>
-                <th>F. Nac.</th>
-                <th>Edad</th>
-                <th>Teléfono</th>
-                <th>Email</th>
-                <th>Beca</th>
-                <th>Sede</th>
-                <th>Universidad</th>
-                <th>Municipio</th>
-                <th>Hijos</th>
-                <th>Discap.</th>
-                <th>Trabaja</th>
-                <th>Tipo Sangre</th>
-                <th>Edo. Civil</th>
+                <th>Fecha</th>
+                <th>Persona</th>
+                <th>Tipo</th>
+                <th>Estado</th>
+                <th>Prioridad</th>
+                <th>Próxima Fecha</th>
+                <th>Descripción</th>
             </tr>
         </thead>
         <tbody>
-            <?php $num = 1; foreach ($personas as $p): ?>
+            <?php $num = 1; foreach ($seguimientos as $s): 
+                $persona = model('App\Models\PersonaModel')->find($s['persona_id']);
+                $nombre = $persona ? ($persona['primer_nombre'] . ' ' . $persona['primer_apellido']) : 'N/A';
+                
+                $claseEstado = '';
+                $estado = strtoupper($s['estado'] ?? '');
+                if ($estado === 'PENDIENTE') $claseEstado = 'estado-pendiente';
+                elseif ($estado === 'EN_PROCESO') $claseEstado = 'estado-proceso';
+                elseif ($estado === 'COMPLETADO') $claseEstado = 'estado-completado';
+                
+                $clasePrioridad = '';
+                $prioridad = strtoupper($s['prioridad'] ?? '');
+                if ($prioridad === 'ALTA') $clasePrioridad = 'prioridad-alta';
+                elseif ($prioridad === 'MEDIA') $clasePrioridad = 'prioridad-media';
+                elseif ($prioridad === 'BAJA') $clasePrioridad = 'prioridad-baja';
+            ?>
             <tr>
                 <td><?= $num++ ?></td>
-                <td><?= $p['cedula'] ?? '' ?></td>
-                <td><?= $p['primer_nombre'] ?? '' ?></td>
-                <td><?= $p['segundo_nombre'] ?? '' ?></td>
-                <td><?= $p['primer_apellido'] ?? '' ?></td>
-                <td><?= $p['segundo_apellido'] ?? '' ?></td>
-                <td><?= $p['sexo'] ?? '' ?></td>
-                <td><?= $p['fecha_nacimiento'] ?? '' ?></td>
-                <td><?= $p['edad'] ?? '' ?></td>
-                <td><?= $p['telefono1'] ?? '' ?></td>
-                <td><?= substr($p['correo_electronico'] ?? '', 0, 20) ?></td>
-                <td><?= $p['posee_beca'] ?? '' ?></td>
-                <td><?= $p['sede'] ?? '' ?></td>
-                <td><?= $p['siglas_universidad'] ?? '' ?></td>
-                <td><?= $p['municipio'] ?? '' ?></td>
-                <td><?= $p['cantidad_hijos'] ?? '' ?></td>
-                <td><?= $p['posee_discapacidad'] ?? '' ?></td>
-                <td><?= $p['trabaja'] ?? '' ?></td>
-                <td><?= $p['tipo_sangre'] ?? '' ?></td>
-                <td><?= $p['estado_civil'] ?? '' ?></td>
+                <td><?= date('d/m/Y', strtotime($s['fecha_seguimiento'])) ?></td>
+                <td><?= $nombre ?></td>
+                <td><?= $s['tipo_seguimiento'] ?? '' ?></td>
+                <td class="<?= $claseEstado ?>"><?= $s['estado'] ?? '' ?></td>
+                <td class="<?= $clasePrioridad ?>"><?= $s['prioridad'] ?? '' ?></td>
+                <td><?= !empty($s['proxima_fecha']) ? date('d/m/Y', strtotime($s['proxima_fecha'])) : '-' ?></td>
+                <td><?= substr($s['descripcion'] ?? '', 0, 50) ?>...</td>
             </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
 
-    <div class="total">Total: <?= count($personas) ?> Personas</div>
+    <div class="total">Total: <?= count($seguimientos) ?> Seguimientos</div>
     
     <div style="clear: both;"></div>
     

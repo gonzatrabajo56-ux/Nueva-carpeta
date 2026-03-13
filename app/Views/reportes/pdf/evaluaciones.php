@@ -17,7 +17,7 @@
         
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            font-size: 9px;
+            font-size: 10px;
             color: #333;
             background: #fff;
         }
@@ -30,7 +30,7 @@
         }
         
         .header h1 {
-            font-size: 24px;
+            font-size: 22px;
             color: #2c3e50;
             margin-bottom: 5px;
             text-transform: uppercase;
@@ -58,13 +58,13 @@
             align-items: center;
             margin-bottom: 15px;
             padding: 10px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
             color: white;
             border-radius: 8px;
         }
         
         .company-info h2 {
-            font-size: 18px;
+            font-size: 16px;
         }
         
         .company-info p {
@@ -115,7 +115,7 @@
         }
         
         thead th { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
             color: white;
             padding: 10px 6px;
             text-align: center;
@@ -134,31 +134,25 @@
             border-top-right-radius: 8px;
         }
         
-        tbody tr {
-            transition: background 0.2s;
-        }
-        
         tbody tr:nth-child(even) { 
             background-color: #f8f9fa; 
-        }
-        
-        tbody tr:hover {
-            background-color: #e8f4f8;
         }
         
         tbody td { 
             padding: 8px 6px;
             text-align: center;
             border: 1px solid #ecf0f1;
-            font-size: 8px;
+            font-size: 9px;
         }
         
-        tbody tr:last-child td:first-child {
-            border-bottom-left-radius: 8px;
+        .resultado-aprobado {
+            color: #27ae60;
+            font-weight: bold;
         }
         
-        tbody tr:last-child td:last-child {
-            border-bottom-right-radius: 8px;
+        .resultado-reprobado {
+            color: #e74c3c;
+            font-weight: bold;
         }
         
         .total { 
@@ -167,7 +161,7 @@
             font-weight: bold; 
             font-size: 12px;
             padding: 10px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
             color: white;
             border-radius: 8px;
             display: inline-block;
@@ -204,7 +198,7 @@
 </head>
 <body>
     <div class="no-print" style="margin-bottom: 20px; text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-        <button onclick="window.print()" style="padding: 12px 25px; cursor: pointer; background: #667eea; color: white; border: none; border-radius: 5px; font-size: 14px; margin-right: 10px;">
+        <button onclick="window.print()" style="padding: 12px 25px; cursor: pointer; background: #f39c12; color: white; border: none; border-radius: 5px; font-size: 14px; margin-right: 10px;">
             <i class="bi bi-printer"></i> Imprimir / Guardar PDF
         </button>
         <button onclick="window.close()" style="padding: 12px 25px; cursor: pointer; background: #95a5a6; color: white; border: none; border-radius: 5px; font-size: 14px;">
@@ -215,7 +209,7 @@
     <div class="company-info">
         <div>
             <h2> Sistema de Caracterización AuryS</h2>
-            <p>Reporte de Personas Registradas</p>
+            <p>Reporte de Evaluaciones Realizadas</p>
         </div>
         <div style="text-align: right;">
             <p><strong>Fecha:</strong> <?= date('d/m/Y') ?></p>
@@ -225,7 +219,7 @@
 
     <div class="header">
         <h1><?= $title ?></h1>
-        <p class="subtitle">Reporte completo de caracterización de personas</p>
+        <p class="subtitle">Evaluaciones de desempeño y seguimiento</p>
         <span class="fecha">Generado: <?= $fecha ?></span>
     </div>
 
@@ -237,8 +231,16 @@
             <span class="filtro-valor"><?= $filtros['departamento'] ?? 'Todos' ?></span>
         </div>
         <div class="filtro-item">
+            <span class="filtro-label">Mes:</span>
+            <span class="filtro-valor"><?= $filtros['mes'] ?? 'Todos' ?></span>
+        </div>
+        <div class="filtro-item">
+            <span class="filtro-label">Año:</span>
+            <span class="filtro-valor"><?= $filtros['año'] ?? 'Todos' ?></span>
+        </div>
+        <div class="filtro-item">
             <span class="filtro-label">Total Registros:</span>
-            <span class="filtro-valor"><?= $filtros['total'] ?? count($personas) ?></span>
+            <span class="filtro-valor"><?= $filtros['total'] ?? count($evaluaciones) ?></span>
         </div>
     </div>
     <?php endif; ?>
@@ -247,56 +249,40 @@
         <thead>
             <tr>
                 <th>N°</th>
-                <th>Cédula</th>
-                <th>Primer Nombre</th>
-                <th>Segundo Nombre</th>
-                <th>Primer Apellido</th>
-                <th>Segundo Apellido</th>
-                <th>Sexo</th>
-                <th>F. Nac.</th>
-                <th>Edad</th>
-                <th>Teléfono</th>
-                <th>Email</th>
-                <th>Beca</th>
-                <th>Sede</th>
-                <th>Universidad</th>
-                <th>Municipio</th>
-                <th>Hijos</th>
-                <th>Discap.</th>
-                <th>Trabaja</th>
-                <th>Tipo Sangre</th>
-                <th>Edo. Civil</th>
+                <th>Fecha</th>
+                <th>Persona</th>
+                <th>Tipo</th>
+                <th>Asistencia</th>
+                <th>Puntualidad</th>
+                <th>Trabajo Equipo</th>
+                <th>Iniciativa</th>
+                <th>Total</th>
+                <th>Resultado</th>
             </tr>
         </thead>
         <tbody>
-            <?php $num = 1; foreach ($personas as $p): ?>
+            <?php $num = 1; foreach ($evaluaciones as $e): 
+                $persona = $modelPersona = model('App\Models\PersonaModel')->find($e['persona_id']);
+                $nombre = $persona ? ($persona['primer_nombre'] . ' ' . $persona['primer_apellido']) : 'N/A';
+                $claseResultado = (isset($e['resultado']) && strtoupper($e['resultado']) === 'APROBADO') ? 'resultado-aprobado' : 'resultado-reprobado';
+            ?>
             <tr>
                 <td><?= $num++ ?></td>
-                <td><?= $p['cedula'] ?? '' ?></td>
-                <td><?= $p['primer_nombre'] ?? '' ?></td>
-                <td><?= $p['segundo_nombre'] ?? '' ?></td>
-                <td><?= $p['primer_apellido'] ?? '' ?></td>
-                <td><?= $p['segundo_apellido'] ?? '' ?></td>
-                <td><?= $p['sexo'] ?? '' ?></td>
-                <td><?= $p['fecha_nacimiento'] ?? '' ?></td>
-                <td><?= $p['edad'] ?? '' ?></td>
-                <td><?= $p['telefono1'] ?? '' ?></td>
-                <td><?= substr($p['correo_electronico'] ?? '', 0, 20) ?></td>
-                <td><?= $p['posee_beca'] ?? '' ?></td>
-                <td><?= $p['sede'] ?? '' ?></td>
-                <td><?= $p['siglas_universidad'] ?? '' ?></td>
-                <td><?= $p['municipio'] ?? '' ?></td>
-                <td><?= $p['cantidad_hijos'] ?? '' ?></td>
-                <td><?= $p['posee_discapacidad'] ?? '' ?></td>
-                <td><?= $p['trabaja'] ?? '' ?></td>
-                <td><?= $p['tipo_sangre'] ?? '' ?></td>
-                <td><?= $p['estado_civil'] ?? '' ?></td>
+                <td><?= date('d/m/Y', strtotime($e['fecha_evaluacion'])) ?></td>
+                <td><?= $nombre ?></td>
+                <td><?= $e['tipo_evaluacion'] ?? '' ?></td>
+                <td><?= $e['asistencia'] ?? '' ?></td>
+                <td><?= $e['puntualidad'] ?? '' ?></td>
+                <td><?= $e['trabajo_equipo'] ?? '' ?></td>
+                <td><?= $e['iniciativa'] ?? '' ?></td>
+                <td><?= $e['puntuacion_total'] ?? '' ?></td>
+                <td class="<?= $claseResultado ?>"><?= $e['resultado'] ?? '' ?></td>
             </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
 
-    <div class="total">Total: <?= count($personas) ?> Personas</div>
+    <div class="total">Total: <?= count($evaluaciones) ?> Evaluaciones</div>
     
     <div style="clear: both;"></div>
     
